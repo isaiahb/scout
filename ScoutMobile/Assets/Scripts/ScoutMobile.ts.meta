@@ -29,9 +29,22 @@
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
     camera: false
+    cameraIcon: false
+    cameraPrefab: false
+    cardTexture: false
     font: false
     hudTemplate: false
+    imageTemplate: false
+    lightIcon: false
+    lightPrefab: false
     markerMaterial: false
+    noteIcon: false
+    panelTexture: false
+    pillTexture: false
+    seatedIcon: false
+    seatedPrefab: false
+    standingIcon: false
+    standingPrefab: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -45,6 +58,19 @@
       markerMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       font: !<reference.Font> 00000000-0000-0000-0000-000000000000
       hudTemplate: !<reference.Text> 00000000-0000-0000-0000-000000000000
+      imageTemplate: !<reference.Image> 00000000-0000-0000-0000-000000000000
+      panelTexture: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      cardTexture: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      pillTexture: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      cameraIcon: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      lightIcon: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      noteIcon: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      standingIcon: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      seatedIcon: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      cameraPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      lightPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      standingPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      seatedPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -53,3 +79,16 @@
     - // @input Asset.Material markerMaterial
     - // @input Asset.Font font
     - // @input Component.Text hudTemplate
+    - // @input Component.Image imageTemplate
+    - // @input Asset.Texture panelTexture
+    - // @input Asset.Texture cardTexture
+    - // @input Asset.Texture pillTexture
+    - // @input Asset.Texture cameraIcon
+    - // @input Asset.Texture lightIcon
+    - // @input Asset.Texture noteIcon
+    - // @input Asset.Texture standingIcon
+    - // @input Asset.Texture seatedIcon
+    - // @input Asset.ObjectPrefab cameraPrefab
+    - // @input Asset.ObjectPrefab lightPrefab
+    - // @input Asset.ObjectPrefab standingPrefab
+    - // @input Asset.ObjectPrefab seatedPrefab

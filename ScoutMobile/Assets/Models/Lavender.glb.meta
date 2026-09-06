@@ -1,0 +1,133 @@
+- !<AssetImportMetadata/af668924-0b29-4582-a898-6f05ff8ba012>
+  ImportedAssetIds:
+    .hidden/LavenderMaterial: !<reference> b7ab9f30-e50b-415a-af97-5f549ab6317d
+    03bd7004caece01a: !<reference> 580dd1fb-32c7-4d22-a11c-695c55aa1647
+    1ba38fcb1cfb0eba: !<reference> cec17ed6-fd6e-4011-86ff-21f5642fab16
+    26ba073d67b9d0dd: !<reference> 265b3570-bbda-40e6-a33f-b2857e5987fc
+    657c264db4d38ac9: !<reference> 93f557eb-de71-40c8-892d-e97f7d5a174d
+    88ab437fd121cc69: !<reference> 392adbf8-a3c8-49d3-b824-40a8940437f5
+    Materials/LavenderMaterial: !<reference> e0aacc9d-18dd-4e92-b550-1be3cee91720
+    Materials/LavenderMaterial|LavenderMaterial|GraphPassInfo: !<reference> 3263157d-628a-4fd8-aaf6-805933545255
+    Meshes/LavenderMesh: !<reference> bb7d56fd-0738-4459-88f3-805530fc1ba2
+    Scene: !<reference> 22ca2d51-2d4e-4dcd-95d9-beaa8e664729
+    Textures/LavenderBaseColor: !<reference> 638bbaa7-7f3d-433f-a9e8-0295bb10bf3d
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> 22ca2d51-2d4e-4dcd-95d9-beaa8e664729
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> 5a9951c9-d03c-40ac-99e6-1380ab24143c
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      png: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/265b3570-bbda-40e6-5cc0-4d7a81a67803>
+  PrefabRemaps:
+    []
+  Name: Lavender
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 392adbf8-a3c8-49d3-47db-bf576bfbc80a
+  Components:
+    []
+- !<SceneObject/392adbf8-a3c8-49d3-47db-bf576bfbc80a>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 93f557eb-de71-40c8-76d2-168082a5e8b2
+  Components:
+    []
+- !<SceneObject/580dd1fb-32c7-4d22-5ee3-96a3aa55e9b8>
+  PrefabRemaps:
+    []
+  Name: Lavender
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> cec17ed6-fd6e-4011-7900-de0a9bd054e9
+- !<ObjectPrefabAssetData/5a9951c9-d03c-40ac-99e6-1380ab24143c>
+  Prototype: !<ObjectOwner/895f4884-556e-4e5c-aee7-888fdb422f62>
+    PackagePath: ""
+    objects:
+      - !<own> 265b3570-bbda-40e6-5cc0-4d7a81a67803
+- !<SceneObject/93f557eb-de71-40c8-76d2-168082a5e8b2>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 580dd1fb-32c7-4d22-5ee3-96a3aa55e9b8
+  Components:
+    []
+- !<RenderMeshVisual/cec17ed6-fd6e-4011-7900-de0a9bd054e9>
+  PrefabRemaps:
+    []
+  Name: LavenderMesh
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> e0aacc9d-18dd-4e92-b550-1be3cee91720
+  Mesh: !<reference> bb7d56fd-0738-4459-88f3-805530fc1ba2
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}

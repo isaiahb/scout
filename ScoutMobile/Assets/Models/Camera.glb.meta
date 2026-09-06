@@ -1,0 +1,133 @@
+- !<AssetImportMetadata/be8a4544-c974-440a-8ad5-1619ae6b9459>
+  ImportedAssetIds:
+    .hidden/CameraMaterial: !<reference> 53115e6b-553b-4367-8c1f-4e4fe52ef582
+    0b27a6813c8b2f82: !<reference> 4bf775b7-3575-4f88-b771-1cf41dd7e4a0
+    26ba073d67b9d0dd: !<reference> e7242622-0dcd-4d16-8818-b0670c76800e
+    657c264db4d38ac9: !<reference> 08422275-ab2f-4522-a3cf-0c638dc41e98
+    88ab437fd121cc69: !<reference> 0ee793ab-9060-479a-b496-30f57176106e
+    Materials/CameraMaterial: !<reference> 1b4aab62-2ac0-403c-8c79-1edfb8dafec8
+    Materials/CameraMaterial|CameraMaterial|GraphPassInfo: !<reference> 583b799e-58f5-4cdb-973a-f3bc09e7a3f6
+    Meshes/CameraMesh: !<reference> 2dfc1867-876f-4783-9af6-27b5205cfa32
+    Scene: !<reference> a1f09421-67ee-40b9-bcc6-2f889a375e43
+    Textures/CameraBaseColor: !<reference> f562f393-e01c-417c-a5b8-0255ba86feb1
+    d5ec762370d4ca50: !<reference> bae2fbf3-52cd-40d7-814f-9b17333e9786
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> a1f09421-67ee-40b9-bcc6-2f889a375e43
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> de5d05c4-151d-44fb-b7ff-0537dd207698
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      png: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/08422275-ab2f-4522-5c30-f39c723be167>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> bae2fbf3-52cd-40d7-7eb0-64e8ccc16879
+  Components:
+    []
+- !<SceneObject/0ee793ab-9060-479a-4b69-cf0a8e89ef91>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 08422275-ab2f-4522-5c30-f39c723be167
+  Components:
+    []
+- !<RenderMeshVisual/4bf775b7-3575-4f88-488e-e30be2281b5f>
+  PrefabRemaps:
+    []
+  Name: CameraMesh
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 1b4aab62-2ac0-403c-8c79-1edfb8dafec8
+  Mesh: !<reference> 2dfc1867-876f-4783-9af6-27b5205cfa32
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/bae2fbf3-52cd-40d7-7eb0-64e8ccc16879>
+  PrefabRemaps:
+    []
+  Name: Camera
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 4bf775b7-3575-4f88-488e-e30be2281b5f
+- !<ObjectPrefabAssetData/de5d05c4-151d-44fb-b7ff-0537dd207698>
+  Prototype: !<ObjectOwner/98bb1eb5-dd90-4e81-846f-d876cc96f917>
+    PackagePath: ""
+    objects:
+      - !<own> e7242622-0dcd-4d16-77e7-4f98f3897ff1
+- !<SceneObject/e7242622-0dcd-4d16-77e7-4f98f3897ff1>
+  PrefabRemaps:
+    []
+  Name: Camera
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 0ee793ab-9060-479a-4b69-cf0a8e89ef91
+  Components:
+    []
