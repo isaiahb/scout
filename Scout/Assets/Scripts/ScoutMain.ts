@@ -11,6 +11,25 @@ import {Interactor,InteractorInputType} from "SpectaclesInteractionKit.lspkg/Cor
 import {HandInputData} from "SpectaclesInteractionKit.lspkg/Providers/HandInputData/HandInputData";
 import {IMAGE_MATERIAL_ASSET} from "SpectaclesUIKit.lspkg/Scripts/Utility/Assets";
 
+/** Imported GLB prefabs are wrapped in empty "Scenes"/"Scene" nodes — the actual RenderMeshVisual is
+ * nested a level or two below the instantiate() root, not on it. */
+function findMeshVisual(root:SceneObject):RenderMeshVisual|null {
+  const visual=root.getComponent("Component.RenderMeshVisual") as RenderMeshVisual;
+  if(visual)return visual;
+  for(let i=0;i<root.getChildrenCount();i++){
+    const found=findMeshVisual(root.getChild(i));
+    if(found)return found;
+  }
+  return null;
+}
+function findChildNamed(root:SceneObject,name:string):SceneObject|null {
+  if(root.name===name)return root;
+  for(let i=0;i<root.getChildrenCount();i++){
+    const found=findChildNamed(root.getChild(i),name);
+    if(found)return found;
+  }
+  return null;
+}
 const WorldQuery=require("LensStudio:WorldQueryModule") as WorldQueryModule;
 const GROUND_HIT_TIMEOUT=0.2;
 const GROUND_INDICATOR=requireAsset("../Icons/ground_indicator.png") as Texture;
@@ -20,6 +39,30 @@ const GROUND_INDICATOR_LIFT=0.5; // avoid z-fighting with the real floor mesh
 const GROUND_PULSE_SPEED=2.4,GROUND_PULSE_DEPTH=0.18;
 
 const MODEL_HEIGHTS=[145,165,30,170,125];
+// Key light rig: local offset from the model's pivot to the softbox opening, in the model's own raw
+// mesh units (meters) — a child's local position is carried through the SAME transform that maps the
+// mesh's own vertices to world space, so using the mesh's own coordinates directly (not re-scaled)
+// lands exactly where the panel is. Measured directly off Light.glb's mesh (the panel is the y>0.17
+// band of the raw vertex data).
+const KEY_LIGHT_OFFSET=new vec3(0.0095,0.235,0.08);
+const KEY_LIGHT_COLOR=new vec3(0xfd/255,0xfb/255,0xf7/255); // neutral daylight white
+const KEY_LIGHT_INTENSITY=1;
+// Real key light stands are elevated and angled down toward the subject; without this the beam aims
+// dead level and sails clean over anyone shorter than the panel (measured ~32° miss against a seated
+// subject placed a stand's length away — comfortably outside any plausible spot cone). Tilting the
+// bulb down around its own local +X compensates without touching the marker's own yaw.
+const KEY_LIGHT_TILT_DOWN=30*Math.PI/180;
+// Stand-in glow for the diffuser panel — see buildGlowDisc. A sphere rather than a flat disc: the
+// GLB's "Scenes"/"Scene" wrapper nodes may carry a rotation we can't see from vertex data alone, so a
+// flat disc's facing direction isn't reliable — a sphere looks right from every angle regardless.
+// The panel actually has two nested surfaces: a big octagonal diffuser rim (radius up to ~0.1) and a
+// small parabolic reflector dish inside it — flat back wall around z=-0.008, opening widening out to
+// z~0.073 at its own front rim, isolated by binning panel vertices by radius from the center axis
+// (radius <~0.09 is the dish; beyond that is the diffuser fabric). Placed mid-dish so it sits inside
+// the reflector, visible through the opening, without poking past its rim from most viewing angles.
+const GLOW_OFFSET=new vec3(0.009,0.25,0.038);
+const GLOW_RADIUS=0.016;
+const GLOW_COLOR=[1,0.97,0.9,1];
 const TOOL_NAMES=["Camera","Light","Note","Standing","Seated"];
 const PALETTE_DISTANCE=110;
 const PALETTE_HEIGHT_OFFSET=-14;
@@ -245,8 +288,19 @@ export class ScoutMain extends BaseScriptComponent {
     root.getTransform().setWorldPosition(position);
     const f=this.camera.getTransform().forward;
     root.getTransform().setWorldRotation(quat.angleAxis(Math.atan2(f.x,f.z),vec3.up()));
+    if(kind===1)this.tiltKeyLight(root);
     this.placeAudio.play(1);this.refresh();
     console.log("Scout placed "+label);
+  }
+  /** Angles the key light down toward eye level for a typically-shorter seated/standing subject.
+   * Must run after root's final camera-facing rotation is set (spawnMarker/restore) — computing this
+   * any earlier tilts relative to whatever stale rotation the fresh marker happened to have. */
+  private tiltKeyLight(root:SceneObject):void {
+    const bulb=findChildNamed(root,"Bulb");
+    if(!bulb)return;
+    const forward=bulb.getTransform().forward;
+    const tilted=forward.uniformScale(Math.cos(KEY_LIGHT_TILT_DOWN)).sub(vec3.up().uniformScale(Math.sin(KEY_LIGHT_TILT_DOWN))).normalize();
+    bulb.getTransform().setWorldRotation(quat.lookAt(tilted,vec3.up()));
   }
   private prefabFor(kind:number):ObjectPrefab {return [this.cameraPrefab,this.lightPrefab,null,this.standingPrefab,this.seatedPrefab][kind];}
   private makeMarker(kind:number,label:string,groundY:number):SceneObject {
@@ -256,6 +310,13 @@ export class ScoutMain extends BaseScriptComponent {
       const model=prefab.instantiate(root),t=model.getTransform();
       t.setLocalScale(t.getLocalScale().uniformScale(height/30));
       t.setLocalPosition(new vec3(0,-height/2,0));
+      if(kind===1)this.buildKeyLight(model);
+      // Standing/seated subjects both cast and receive shadows on themselves so a nearby key light
+      // actually shows contours (nose, contact shadows) on the subject, not just floodlighting it.
+      if(kind===3||kind===4){
+        const visual=findMeshVisual(model);
+        if(visual)visual.meshShadowMode=MeshShadowMode.Both;
+      }
     }else if(kind!==2)buildMarkerMesh(root,kind,this.markerMaterial,false);
     this.palette.decorateMarker(root,label,kind===2,kind===2?0:height/2+8,()=>this.editMarker(root),()=>this.deleteMarker(root));
     const col=root.createComponent("Physics.ColliderComponent") as ColliderComponent;
@@ -268,6 +329,60 @@ export class ScoutMain extends BaseScriptComponent {
     manipulation.setCanScale(false);
     manipulation.setCanRotate(false);
     this.placed.push(root);this.kinds.push(kind);this.groundY.push(groundY);return root;
+  }
+  /** Real-time light on the Light prop so it actually illuminates the scene and casts a shadow, aimed
+   * out of the softbox opening (model's local +Z, matching the root −Z / child +Z depth idiom used
+   * everywhere placed props are oriented). */
+  private buildKeyLight(model:SceneObject):void {
+    const bulb=global.scene.createSceneObject("Bulb");bulb.setParent(model);
+    bulb.getTransform().setLocalPosition(KEY_LIGHT_OFFSET);
+    // Tilt is applied later, in spawnMarker/restore — at this point the marker root hasn't been given
+    // its final camera-facing rotation yet (that happens after makeMarker returns), so computing a
+    // "forward" here would tilt relative to a stale, still-identity orientation.
+    const light=bulb.createComponent("Component.LightSource") as LightSource;
+    // Spot is what a real key light shines like, but its cone angle is Editor-API-only (StudioLib's
+    // LightSource has no angle/cone property at all — grepped the whole class). A Spot built purely at
+    // runtime gets a degenerate, effectively zero-width cone and lights nothing, confirmed by comparing
+    // against Point (illuminates fine, no shadows) and Directional (illuminates fine, shadows work) in
+    // the live preview. Directional trades away real distance falloff — it lights the whole scene from
+    // one angle rather than falling off near the stand — but it's the only combination that actually
+    // shows both illumination and a cast shadow on a subject.
+    light.lightType=LightType.Directional;
+    light.color=KEY_LIGHT_COLOR;
+    light.intensity=KEY_LIGHT_INTENSITY;
+    light.shadowType=ShadowType.ShadowMap;
+    this.buildGlowDisc(model);
+  }
+  /** A small brightly-colored sphere standing in for the softbox's diffuser panel actually glowing.
+   * Light.glb shares one material across the whole prop (housing + stand + panel), so tinting that
+   * material directly would light up the metal stand too — cheaper and safer to hang a separate unlit
+   * bulb just in front of the real panel instead of touching the shared GLB material. A sphere rather
+   * than a flat disc: the GLB's "Scenes"/"Scene" wrapper nodes may carry a rotation not visible in the
+   * raw vertex data, so a flat disc's facing direction can't be trusted — a sphere reads correctly
+   * from any angle. */
+  private buildGlowDisc(model:SceneObject):void {
+    const glow=global.scene.createSceneObject("Glow");glow.setParent(model);
+    glow.getTransform().setLocalPosition(GLOW_OFFSET);
+    const visual=glow.createComponent("Component.RenderMeshVisual") as RenderMeshVisual;
+    const b=new MeshBuilder([{name:"position",components:3},{name:"normal",components:3,normalized:true},{name:"color",components:4}]);
+    b.topology=MeshTopology.Triangles;b.indexType=MeshIndexType.UInt16;
+    const lat=8,lon=12;
+    const dir=(i:number,j:number)=>{
+      const theta=i*Math.PI/lat,phi=j*2*Math.PI/lon,sinT=Math.sin(theta);
+      return [sinT*Math.cos(phi),Math.cos(theta),sinT*Math.sin(phi)];
+    };
+    let vi=0;
+    const addTri=(a:number[],b2:number[],c:number[])=>{
+      [a,b2,c].forEach(p=>b.appendVerticesInterleaved([p[0]*GLOW_RADIUS,p[1]*GLOW_RADIUS,p[2]*GLOW_RADIUS, p[0],p[1],p[2], ...GLOW_COLOR]));
+      b.appendIndices([vi,vi+1,vi+2]);vi+=3;
+    };
+    for(let i=0;i<lat;i++)for(let j=0;j<lon;j++){
+      const p00=dir(i,j),p10=dir(i+1,j),p01=dir(i,j+1),p11=dir(i+1,j+1);
+      addTri(p00,p11,p10);addTri(p00,p01,p11);
+    }
+    visual.mesh=b.getMesh();
+    visual.mainMaterial=this.markerMaterial.clone();
+    b.updateMesh();
   }
   /** Toggles the constrained-axis handles for one specific asset; vertical movement only applies to standing/seated actors. */
   private editMarker(root:SceneObject):void {
@@ -311,6 +426,7 @@ export class ScoutMain extends BaseScriptComponent {
     for(const m of data.markers){const obj=this.makeMarker(m.kind,m.label,0),t=obj.getTransform();
       t.setLocalPosition(new vec3(m.position[0],m.position[1],m.position[2]));
       t.setLocalRotation(new quat(m.rotation[0],m.rotation[1],m.rotation[2],m.rotation[3]));
+      if(m.kind===1)this.tiltKeyLight(obj);
       this.groundY[this.groundY.length-1]=t.getWorldPosition().y;
     }
     this.sequence=Math.max(this.sequence,...data.markers.map(m=>Number(m.label.match(/(\d+)$/)?.[1])||0));this.refresh();
