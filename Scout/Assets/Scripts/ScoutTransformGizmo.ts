@@ -1,0 +1,127 @@
+import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable";
+import {Interactor,TargetingMode} from "SpectaclesInteractionKit.lspkg/Core/Interactor/Interactor";
+import {buildLathe} from "./ScoutMarkerMesh";
+
+const AXES=[vec3.right(),vec3.up(),vec3.forward()];
+const COLORS:[number,number,number,number][]=[[1,.15,.15,1],[.15,1,.3,1],[.2,.5,1,1]];
+const RADIUS=75;
+/** One world-axis gizmo shared by all placements. SIK supplies mouse and hand input. */
+export class ScoutTransformGizmo {
+  private root:SceneObject;
+  private move:SceneObject;
+  private rotate:SceneObject;
+  private target:SceneObject=null;
+  private mode="Move";
+  private drag:{interactor:Interactor;axis:vec3;normal:vec3;origin:vec3;position:vec3;rotation:quat;previous:vec3;angle:number;direct:boolean;rotate:boolean;edge:boolean;tangent:vec3}=null;
+  constructor(private material:Material,private camera:Camera,private touched:()=>void){
+    this.material=material.clone();
+    this.material.mainPass.depthTest=false;
+    this.material.mainPass.depthWrite=false;
+    this.root=this.object("Transform handles");
+    this.move=this.object("Move handles",this.root);
+    this.rotate=this.object("Rotate handles",this.root);
+    AXES.forEach((axis,i)=>{
+      const arrow=this.object("Move "+"XYZ"[i],this.move);
+      arrow.getTransform().setLocalRotation(quat.rotationFromTo(vec3.up(),axis));
+      this.mesh(arrow,b=>buildLathe(b,[[0,-39],[1.3,-39],[1.3,26],[5,26],[0,39]],16,COLORS[i]));
+      const collider=arrow.createComponent("Physics.ColliderComponent") as ColliderComponent;
+      const box=Shape.createBoxShape();box.size=new vec3(11,80,11);collider.shape=box;
+      // Keep the collider centered on the shaft without offsetting the axis origin.
+      arrow.getTransform().setLocalPosition(axis.uniformScale(69));
+      this.bind(arrow,axis,false);
+      const ring=this.object("Rotate "+"XYZ"[i],this.rotate);
+      const u=AXES[(i+1)%3],v=axis.cross(u);
+      this.mesh(ring,b=>this.torus(b,u,v,COLORS[i]));
+      // Separate arc hit boxes leave the center empty, so equipment remains selectable.
+      for(let j=0;j<24;j++){
+        const angle=j*Math.PI/12;
+        const radial=u.uniformScale(Math.cos(angle)).add(v.uniformScale(Math.sin(angle)));
+        const hit=this.object("Rotate "+"XYZ"[i]+" arc "+j,ring);
+        hit.getTransform().setLocalPosition(radial.uniformScale(RADIUS));
+        hit.getTransform().setLocalRotation(quat.rotationFromTo(vec3.up(),axis.cross(radial)));
+        const col=hit.createComponent("Physics.ColliderComponent") as ColliderComponent;
+        const shape=Shape.createBoxShape();shape.size=new vec3(7,20,7);col.shape=shape;
+        this.bind(hit,axis,true);
+      }
+    });
+    this.update();
+  }
+  select(target:SceneObject):void {if(target!==this.target)this.drag=null;this.target=target;this.update();}
+  setMode(mode:string):void {this.drag=null;this.mode=mode;this.update();}
+  update():void {
+    const valid=this.target&&!isNull(this.target);
+    this.root.enabled=!!valid&&this.mode!=="Hide";
+    this.move.enabled=this.mode==="Move";this.rotate.enabled=this.mode==="Rotate";
+    if(valid)this.root.getTransform().setWorldPosition(this.target.getTransform().getWorldPosition());
+  }
+  private bind(object:SceneObject,axis:vec3,rotate:boolean):void {
+    const input=object.createComponent(Interactable.getTypeName()) as Interactable;
+    input.targetingMode=3;input.enableInstantDrag=true;
+    input.onTriggerStart.add(e=>{
+      e.stopPropagation();this.touched();
+      if(!this.target||isNull(this.target)||this.drag)return;
+      const t=this.target.getTransform(),origin=t.getWorldPosition();
+      const view=this.camera.getTransform().getWorldPosition().sub(origin).normalize();
+      const direct=e.interactor.activeTargetingMode===TargetingMode.Direct;
+      const edge=rotate&&!direct&&Math.abs(view.dot(axis))<.15;
+      let normal=rotate?(edge?view:axis):view.sub(axis.uniformScale(view.dot(axis)));
+      if(normal.length<.05)normal=this.camera.getTransform().up;
+      normal=normal.normalize();
+      const point=direct?e.interactor.startPoint:this.intersection(e.interactor,origin,normal);
+      if(!point)return;
+      this.drag={interactor:e.interactor,axis,normal,origin,position:origin,rotation:t.getWorldRotation(),previous:point,angle:0,direct,rotate,edge,tangent:edge?view.cross(axis).normalize():vec3.zero()};
+      console.log("Scout handle: "+object.name+" on "+this.target.name);
+    });
+    input.onTriggerUpdate.add(e=>{
+      if(!this.drag||this.drag.interactor!==e.interactor)return;
+      e.stopPropagation();this.touched();
+      const d=this.drag,t=this.target.getTransform();
+      const point=d.direct?e.interactor.startPoint:this.intersection(e.interactor,d.origin,d.normal);
+      if(!point)return;
+      if(d.rotate){
+        const a=d.previous.sub(d.origin),b=point.sub(d.origin);
+        const from=a.sub(d.axis.uniformScale(a.dot(d.axis))),to=b.sub(d.axis.uniformScale(b.dot(d.axis)));
+        if(d.edge||(from.length>1&&to.length>1)){
+          d.angle+=d.edge?point.sub(d.previous).dot(d.tangent)/RADIUS:Math.atan2(d.axis.dot(from.cross(to)),from.dot(to));
+          t.setWorldRotation(quat.angleAxis(d.angle,d.axis).multiply(d.rotation));
+        }
+      }else{
+        d.position=d.position.add(d.axis.uniformScale(point.sub(d.previous).dot(d.axis)));
+        t.setWorldPosition(d.position);
+      }
+      d.previous=point;this.update();
+    });
+    const end=()=>{this.drag=null;this.touched();};
+    input.onTriggerEnd.add(end);input.onTriggerEndOutside.add(end);input.onTriggerCanceled.add(end);
+  }
+  private intersection(interactor:Interactor,origin:vec3,normal:vec3):vec3 {
+    const start=interactor.startPoint,direction=interactor.direction;
+    if(!start||!direction)return null;
+    const denominator=direction.dot(normal);
+    if(Math.abs(denominator)<.015)return null;
+    const distance=origin.sub(start).dot(normal)/denominator;
+    if(distance<0||distance>10000)return null;
+    return start.add(direction.uniformScale(distance));
+  }
+  private object(name:string,parent?:SceneObject):SceneObject {
+    const so=global.scene.createSceneObject(name);if(parent)so.setParent(parent);return so;
+  }
+  private mesh(object:SceneObject,build:(b:MeshBuilder)=>void):void {
+    const b=new MeshBuilder([{name:"position",components:3},{name:"normal",components:3,normalized:true},{name:"color",components:4}]);
+    b.topology=MeshTopology.Triangles;b.indexType=MeshIndexType.UInt16;build(b);
+    const visual=object.createComponent("Component.RenderMeshVisual") as RenderMeshVisual;
+    visual.mesh=b.getMesh();visual.mainMaterial=this.material;visual.setRenderOrder(100);b.updateMesh();
+  }
+  private torus(b:MeshBuilder,u:vec3,v:vec3,color:number[]):void {
+    const axis=u.cross(v),indices:number[]=[];
+    for(let j=0;j<=64;j++)for(let k=0;k<=8;k++){
+      const a=j*Math.PI/32,t=k*Math.PI/4;
+      const radial=u.uniformScale(Math.cos(a)).add(v.uniformScale(Math.sin(a)));
+      const n=radial.uniformScale(Math.cos(t)).add(axis.uniformScale(Math.sin(t)));
+      const p=radial.uniformScale(RADIUS).add(n.uniformScale(1.2));
+      b.appendVerticesInterleaved([p.x,p.y,p.z,n.x,n.y,n.z,...color]);
+      if(j<64&&k<8){const x=j*9+k;indices.push(x,x+9,x+1,x+1,x+9,x+10);}
+    }
+    b.appendIndices(indices);
+  }
+}

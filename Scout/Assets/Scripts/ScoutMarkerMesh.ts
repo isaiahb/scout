@@ -73,7 +73,7 @@ function addBox(
   return vi;
 }
 
-function buildLathe(
+export function buildLathe(
   builder: MeshBuilder,
   profile: [number, number][],    // [[r, y], ...] bottom→top, r >= 0
   segments: number,                // angular subdivisions (16–32 typical)

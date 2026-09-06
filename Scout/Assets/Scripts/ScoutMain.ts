@@ -1,3 +1,4 @@
+import {ScoutTransformGizmo} from "./ScoutTransformGizmo";
 import {ScoutSharedSession} from "./ScoutSharedSession";
 import {parseLayout,ScoutLayout} from "./ScoutLayout";
 import {ScoutPaletteUI} from "./ScoutPaletteUI";
@@ -36,6 +37,8 @@ export class ScoutMain extends BaseScriptComponent {
   private shared:ScoutSharedSession;
   private kinds:number[]=[];
   private selected=0;
+  private editing:SceneObject=null;
+  private gizmo:ScoutTransformGizmo;
   private sequence=0;
   private placed:SceneObject[]=[];
   private previewShape:SceneObject;
@@ -54,6 +57,8 @@ export class ScoutMain extends BaseScriptComponent {
     if(!this.palette||!this.markers||!this.placementPreview||!this.camera||!this.markerMaterial){console.error("Scout: required scene references are missing");return}
     this.selectAudio=this.audio(SELECT);this.placeAudio=this.audio(PLACE);
     this.palette.onSelect.add(kind=>{this.selected=kind;this.lastAction=getTime();this.selectAudio.play(1);this.rebuildPreview();this.refresh()});
+    this.gizmo=new ScoutTransformGizmo(this.markerMaterial,this.camera,()=>{this.lastAction=getTime();});
+    this.palette.onOrient.add(action=>{this.lastAction=getTime();this.gizmo.setMode(action);});
     this.palette.onUndo.add(()=>this.undo());
     this.palette.onClear.add(()=>this.clear());
     // Manual planning frame; automatic physical relocalization is a later layer.
@@ -85,6 +90,7 @@ export class ScoutMain extends BaseScriptComponent {
   private update():void {
     if(!this.ready)return;
     this.shared?.tick();
+    this.gizmo.update();
     const all=InteractionManager.getInstance().getInteractorsByType(InteractorInputType.All);
     all.forEach(interactor=>{
       if(this.interactors.indexOf(interactor)>=0)return;
@@ -149,9 +155,10 @@ export class ScoutMain extends BaseScriptComponent {
     col.shape=shape;col.debugDrawEnabled=this.debugColliders;
     const interactable=root.createComponent(Interactable.getTypeName()) as Interactable;
     interactable.targetingMode=3;
+    interactable.onTriggerStart.add(()=>{this.editing=root;this.lastAction=getTime();this.refresh();});
     const manipulation=root.createComponent(InteractableManipulation.getTypeName()) as InteractableManipulation;
     manipulation.setCanScale(false);
-    this.placed.push(root);this.kinds.push(kind);return root;
+    this.placed.push(root);this.kinds.push(kind);this.editing=root;return root;
   }
   private undo():void {
     this.lastAction=getTime();const obj=this.placed.pop();this.kinds.pop();
@@ -179,5 +186,8 @@ export class ScoutMain extends BaseScriptComponent {
     }
     this.sequence=Math.max(this.sequence,...data.markers.map(m=>Number(m.label.match(/(\d+)$/)?.[1])||0));this.refresh();
   }
-  private refresh():void {this.palette.setState(this.selected,this.placed.length)}
+  private refresh():void {
+    if(this.placed.indexOf(this.editing)<0)this.editing=this.placed.length?this.placed[this.placed.length-1]:null;
+    this.palette.setState(this.selected,this.placed.length);this.gizmo?.select(this.editing);
+  }
 }

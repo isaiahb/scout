@@ -25,6 +25,8 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   @input @hint("Bright accent for the current selection") @widget(new ColorWidget()) accent: vec4 = new vec4(0.45,0.9,0.95,1);
   @input @hint("Show experimental shared-session controls") showSharedControls:boolean=false;
   onSelect = new Event<number>();
+  onOrient = new Event<string>();
+
   onUndo = new Event<void>();
   onClear = new Event<void>();
   onConnect = new Event<void>();
@@ -43,7 +45,7 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   private build(): void {
     this.sceneObject.createComponent("Component.Canvas");
     const back = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate;
-    const height=this.showSharedControls?39:31;
+    const height=this.showSharedControls?44:36;
     back.size = new vec2(46,height);
     const content = this.obj(this.sceneObject,"PaletteContent",new vec3(0,0,0.6));
     const col = this.flex(content,FlexDirection.Column,46,height,1,2);
@@ -64,6 +66,9 @@ export class ScoutPaletteUI extends BaseScriptComponent {
     const actionRow = this.flex(actions,FlexDirection.Row,42,4.5,1,0);
     this.button(actionRow,"Undo Last",20.5,4.5,ICONS[3],()=>this.onUndo.invoke());
     this.button(actionRow,"Clear All",20.5,4.5,ICONS[4],()=>this.onClear.invoke());
+    const aimRow=this.child(col,"Aim controls",42,4.5);
+    const aimLayout=this.flex(aimRow,FlexDirection.Row,42,4.5,0,0);
+    ["Move","Rotate","Hide"].forEach(label=>this.button(aimLayout,label,13.3,4.5,null,()=>this.onOrient.invoke(label)));
     if(this.showSharedControls){
     const shared=this.child(col,"Shared layout",42,4.5);
     const sharedRow=this.flex(shared,FlexDirection.Row,42,4.5,.6,0);
@@ -73,7 +78,7 @@ export class ScoutPaletteUI extends BaseScriptComponent {
     this.button(sharedRow,"Recover",10,4.5,null,()=>this.onRecover.invoke());
     this.sharedStatus=this.textRow(col,"Shared layout • connect to begin",42,2,"Caption");
     }
-    this.textRow(col,"Pinch to place · Grab to move / rotate",42,2,"Caption");
+    this.textRow(col,"Select object · Drag colored handles",42,2,"Caption");
     this.setState(this.selected,this.count);
   }
   setState(selected:number,count:number): void {
