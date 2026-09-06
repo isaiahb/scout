@@ -21,15 +21,17 @@ export class ScoutTransformGizmo {
     this.move=this.object("Move handles",this.root);
     this.rotate=this.object("Rotate handles",this.root);
     AXES.forEach((axis,i)=>{
-      const arrow=this.object("Move "+"XYZ"[i],this.move);
-      arrow.getTransform().setLocalRotation(quat.rotationFromTo(vec3.up(),axis));
-      this.mesh(arrow,b=>buildLathe(b,[[0,-14],[.9,-14],[.9,6],[3.5,6],[0,14]],16,COLORS[i]));
-      const collider=arrow.createComponent("Physics.ColliderComponent") as ColliderComponent;
-      const box=Shape.createBoxShape();box.size=new vec3(9,30,9);collider.shape=box;
-      // Keep the collider centered on the shaft without offsetting the axis origin.
-      arrow.getTransform().setLocalPosition(axis.uniformScale(77));
-      this.bind(arrow,axis,false);
-      // Facing direction uses only world up; retain all three translation arrows.
+      if(i!==1){
+        const arrow=this.object("Move "+"XYZ"[i],this.move);
+        arrow.getTransform().setLocalRotation(quat.rotationFromTo(vec3.up(),axis));
+        this.mesh(arrow,b=>buildLathe(b,[[0,-14],[.9,-14],[.9,6],[3.5,6],[0,14]],16,COLORS[i]));
+        const collider=arrow.createComponent("Physics.ColliderComponent") as ColliderComponent;
+        const box=Shape.createBoxShape();box.size=new vec3(9,30,9);collider.shape=box;
+        // Keep the collider centered on the shaft without offsetting the axis origin.
+        arrow.getTransform().setLocalPosition(axis.uniformScale(77));
+        this.bind(arrow,axis,false);
+      }
+      // Facing direction uses world up; translation handles stay in the horizontal plane.
       if(i!==1)return;
       const ring=this.object("Rotate "+"XYZ"[i],this.rotate);
       const u=AXES[(i+1)%3],v=axis.cross(u);
