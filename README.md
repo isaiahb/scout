@@ -6,7 +6,7 @@ A spatial pre-production prototype for filmmakers: select a camera, light, note,
 
 The primary demo is `Scout/Scout.esproj` in Lens Studio’s Specs interactive preview: place equipment and actors, grab to move, adjust facing with the rotation ring, then record a walkthrough from multiple viewpoints. Share the recording as a visual setup brief.
 
-Select a placed object to attach its transform handles, then choose **Move** or **Rotate** in the palette. Drag the red X, green Y, or blue Z arrow to translate along one world axis; drag the green horizontal ring to change facing continuously around the vertical Y axis. Free grabbing only translates, so objects stay upright. **Hide** removes handles for the walkthrough. Grabbing another object selects it; new placements are selected automatically. These controls transform the whole model, including its stand. The mobile project is retained as an earlier experiment.
+Select a placed object to attach its move arrows and horizontal rotation ring together. Drag the red X, green Y, or blue Z arrow to translate along one world axis; drag the green horizontal ring to change facing continuously around the vertical Y axis. Free grabbing only translates, so objects stay upright. **Hide handles** removes them for the walkthrough; **Show handles** brings them back. Grabbing another object selects it; new placements are selected automatically. These controls transform the whole model, including its stand. The mobile project is retained as an earlier experiment.
 
 Shared-session controls are experimental and hidden by default (`showSharedControls` on ScoutPaletteUI). This demo does not require account sharing or room relocalization.
 

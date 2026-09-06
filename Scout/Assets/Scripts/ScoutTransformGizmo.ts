@@ -4,14 +4,14 @@ import {buildLathe} from "./ScoutMarkerMesh";
 
 const AXES=[vec3.right(),vec3.up(),vec3.forward()];
 const COLORS:[number,number,number,number][]=[[1,.15,.15,1],[.15,1,.3,1],[.2,.5,1,1]];
-const RADIUS=75;
+const RADIUS=55;
 /** One world-axis gizmo shared by all placements. SIK supplies mouse and hand input. */
 export class ScoutTransformGizmo {
   private root:SceneObject;
   private move:SceneObject;
   private rotate:SceneObject;
   private target:SceneObject=null;
-  private mode="Move";
+  private mode="Show handles";
   private drag:{interactor:Interactor;axis:vec3;normal:vec3;origin:vec3;position:vec3;rotation:quat;previous:vec3;angle:number;direct:boolean;rotate:boolean;edge:boolean;tangent:vec3}=null;
   constructor(private material:Material,private camera:Camera,private touched:()=>void){
     this.material=material.clone();
@@ -23,11 +23,11 @@ export class ScoutTransformGizmo {
     AXES.forEach((axis,i)=>{
       const arrow=this.object("Move "+"XYZ"[i],this.move);
       arrow.getTransform().setLocalRotation(quat.rotationFromTo(vec3.up(),axis));
-      this.mesh(arrow,b=>buildLathe(b,[[0,-39],[1.3,-39],[1.3,26],[5,26],[0,39]],16,COLORS[i]));
+      this.mesh(arrow,b=>buildLathe(b,[[0,-14],[.9,-14],[.9,6],[3.5,6],[0,14]],16,COLORS[i]));
       const collider=arrow.createComponent("Physics.ColliderComponent") as ColliderComponent;
-      const box=Shape.createBoxShape();box.size=new vec3(11,80,11);collider.shape=box;
+      const box=Shape.createBoxShape();box.size=new vec3(9,30,9);collider.shape=box;
       // Keep the collider centered on the shaft without offsetting the axis origin.
-      arrow.getTransform().setLocalPosition(axis.uniformScale(69));
+      arrow.getTransform().setLocalPosition(axis.uniformScale(77));
       this.bind(arrow,axis,false);
       // Facing direction uses only world up; retain all three translation arrows.
       if(i!==1)return;
@@ -42,7 +42,7 @@ export class ScoutTransformGizmo {
         hit.getTransform().setLocalPosition(radial.uniformScale(RADIUS));
         hit.getTransform().setLocalRotation(quat.rotationFromTo(vec3.up(),axis.cross(radial)));
         const col=hit.createComponent("Physics.ColliderComponent") as ColliderComponent;
-        const shape=Shape.createBoxShape();shape.size=new vec3(7,20,7);col.shape=shape;
+        const shape=Shape.createBoxShape();shape.size=new vec3(7,15,7);col.shape=shape;
         this.bind(hit,axis,true);
       }
     });
@@ -52,8 +52,8 @@ export class ScoutTransformGizmo {
   setMode(mode:string):void {this.drag=null;this.mode=mode;this.update();}
   update():void {
     const valid=this.target&&!isNull(this.target);
-    this.root.enabled=!!valid&&this.mode!=="Hide";
-    this.move.enabled=this.mode==="Move";this.rotate.enabled=this.mode==="Rotate";
+    this.root.enabled=!!valid&&this.mode!=="Hide handles";
+    this.move.enabled=true;this.rotate.enabled=true;
     if(valid)this.root.getTransform().setWorldPosition(this.target.getTransform().getWorldPosition());
   }
   private bind(object:SceneObject,axis:vec3,rotate:boolean):void {

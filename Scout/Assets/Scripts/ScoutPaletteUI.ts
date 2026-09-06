@@ -68,7 +68,7 @@ export class ScoutPaletteUI extends BaseScriptComponent {
     this.button(actionRow,"Clear All",20.5,4.5,ICONS[4],()=>this.onClear.invoke());
     const aimRow=this.child(col,"Aim controls",42,4.5);
     const aimLayout=this.flex(aimRow,FlexDirection.Row,42,4.5,0,0);
-    ["Move","Rotate","Hide"].forEach(label=>this.button(aimLayout,label,13.3,4.5,null,()=>this.onOrient.invoke(label)));
+    ["Show handles","Hide handles"].forEach(label=>this.button(aimLayout,label,20.5,4.5,null,()=>this.onOrient.invoke(label)));
     if(this.showSharedControls){
     const shared=this.child(col,"Shared layout",42,4.5);
     const sharedRow=this.flex(shared,FlexDirection.Row,42,4.5,.6,0);
