@@ -1,0 +1,24 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.mcp.json
+mcp.json
+.codex/
+.claude/
+.cursor/
+
+# Private working material
+private/
+research/
+transcripts/
+RESEARCH.md
+TONIGHT.md
+*.log
+
+# Generated files
+.DS_Store
+node_modules/
+__pycache__/
+*.pyc
+.venv/
