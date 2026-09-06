@@ -31,7 +31,6 @@
     accent: false
     noteText: false
     showSharedControls: false
-    title: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -41,15 +40,13 @@
   Attachments:
     []
   DefaultScriptInputs:
-    - title: scout
-      noteText: Check this angle
+    - noteText: Check this angle
       accent: !<Vec4> {x: 0.450000, y: 0.900000, z: 0.950000, w: 1.000000}
       showSharedControls: false
   ScriptTypes:
     -
       {}
   InputLines:
-    - '// @input string title = "scout" {"hint":"Palette title"}'
     - '// @input string noteText = "Check this angle" {"hint":"Placeholder shown on placed notepads"}'
     - '// @input vec4 accent = {0.45,0.9,0.95,1} {"hint":"Bright accent for the current selection", "widget":"color"}'
     - '// @input bool showSharedControls {"hint":"Show experimental shared-session controls"}'

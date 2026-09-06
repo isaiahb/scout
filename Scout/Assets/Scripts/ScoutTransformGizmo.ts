@@ -9,9 +9,12 @@ const RADIUS=55;
 export class ScoutTransformGizmo {
   private root:SceneObject;
   private move:SceneObject;
+  private moveVertical:SceneObject;
   private rotate:SceneObject;
   private target:SceneObject=null;
   private mode="Show handles";
+  private allowVertical=false;
+  private floorY=-Infinity;
   private drag:{interactor:Interactor;axis:vec3;normal:vec3;origin:vec3;position:vec3;rotation:quat;previous:vec3;angle:number;direct:boolean;rotate:boolean;edge:boolean;tangent:vec3}=null;
   constructor(private material:Material,private camera:Camera,private touched:()=>void){
     this.material=material.clone();
@@ -19,10 +22,11 @@ export class ScoutTransformGizmo {
     this.material.mainPass.depthWrite=false;
     this.root=this.object("Transform handles");
     this.move=this.object("Move handles",this.root);
+    this.moveVertical=this.object("Move vertical handle",this.root);
     this.rotate=this.object("Rotate handles",this.root);
     AXES.forEach((axis,i)=>{
-      if(i!==1){
-        const arrow=this.object("Move "+"XYZ"[i],this.move);
+      {
+        const arrow=this.object("Move "+"XYZ"[i],i===1?this.moveVertical:this.move);
         arrow.getTransform().setLocalRotation(quat.rotationFromTo(vec3.up(),axis));
         this.mesh(arrow,b=>buildLathe(b,[[0,-14],[.9,-14],[.9,6],[3.5,6],[0,14]],16,COLORS[i]));
         const collider=arrow.createComponent("Physics.ColliderComponent") as ColliderComponent;
@@ -50,12 +54,17 @@ export class ScoutTransformGizmo {
     });
     this.update();
   }
-  select(target:SceneObject):void {if(target!==this.target)this.drag=null;this.target=target;this.update();}
+  select(target:SceneObject,allowVertical=false,floorY=-Infinity):void {
+    if(target!==this.target)this.drag=null;
+    this.target=target;this.allowVertical=allowVertical;this.floorY=floorY;this.update();
+  }
   setMode(mode:string):void {this.drag=null;this.mode=mode;this.update();}
+  /** Whether the handles are currently visible for this exact target — used to toggle off on a repeat edit tap. */
+  isEditing(target:SceneObject):boolean {return this.target===target&&this.mode!=="Hide handles";}
   update():void {
     const valid=this.target&&!isNull(this.target);
     this.root.enabled=!!valid&&this.mode!=="Hide handles";
-    this.move.enabled=true;this.rotate.enabled=true;
+    this.move.enabled=true;this.rotate.enabled=true;this.moveVertical.enabled=this.allowVertical;
     if(valid)this.root.getTransform().setWorldPosition(this.target.getTransform().getWorldPosition());
   }
   private bind(object:SceneObject,axis:vec3,rotate:boolean):void {
@@ -91,6 +100,8 @@ export class ScoutTransformGizmo {
         }
       }else{
         d.position=d.position.add(d.axis.uniformScale(point.sub(d.previous).dot(d.axis)));
+        // Vertical handle only: keep the object from being dragged down into the floor.
+        if(Math.abs(d.axis.y)>0.9)d.position=new vec3(d.position.x,Math.max(d.position.y,this.floorY),d.position.z);
         t.setWorldPosition(d.position);
       }
       d.previous=point;this.update();
@@ -129,3 +140,5 @@ export class ScoutTransformGizmo {
     b.appendIndices(indices);
   }
 }
+
+  
