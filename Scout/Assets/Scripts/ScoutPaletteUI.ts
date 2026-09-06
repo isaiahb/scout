@@ -7,6 +7,8 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes";
 
 const ICONS: Texture[] = [requireAsset("../Icons/videocam.png") as Texture, requireAsset("../Icons/lightbulb.png") as Texture, requireAsset("../Icons/sticky_note_2.png") as Texture, requireAsset("../Icons/undo.png") as Texture, requireAsset("../Icons/delete.png") as Texture];
+const ACTOR_ICONS:Texture[]=[requireAsset("../Icons/person.png") as Texture,requireAsset("../Icons/chair.png") as Texture];
+const TOOL_NAMES=["Camera","Light","Notepad","Standing","Seated"];
 const THEME_FONT=requireAsset("../Fonts/Inter.ttf") as Font;
 const TYPE_SCALE = {Title2:{size:93,weight:700},Body:{size:52,weight:600},Caption:{size:44,weight:500}};
 function applyTextRole(t: Text, role: keyof typeof TYPE_SCALE): void {
@@ -40,9 +42,9 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   private build(): void {
     this.sceneObject.createComponent("Component.Canvas");
     const back = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate;
-    back.size = new vec2(46,33);
+    back.size = new vec2(46,39);
     const content = this.obj(this.sceneObject,"PaletteContent",new vec3(0,0,0.6));
-    const col = this.flex(content,FlexDirection.Column,46,33,1,2);
+    const col = this.flex(content,FlexDirection.Column,46,39,1,2);
     this.textRow(col,this.title,42,4,"Title2");
     this.status = this.textRow(col,"Camera ready  ·  0 placed",42,2,"Body");
     const types = this.child(col,"Marker types",42,6);
@@ -50,6 +52,11 @@ export class ScoutPaletteUI extends BaseScriptComponent {
     ["Camera","Light","Notepad"].forEach((label,i) => {
       const result = this.button(row,label,13.3,6,ICONS[i],() => this.onSelect.invoke(i));
       this.selectionLabels.push(result);
+    });
+    const actors=this.child(col,"Actor poses",42,5);
+    const actorRow=this.flex(actors,FlexDirection.Row,42,5,1,0);
+    ["Standing","Seated"].forEach((label,i)=>{
+      this.selectionLabels.push(this.button(actorRow,label,20.5,5,ACTOR_ICONS[i],()=>this.onSelect.invoke(i+3)));
     });
     const actions = this.child(col,"Actions",42,4.5);
     const actionRow = this.flex(actions,FlexDirection.Row,42,4.5,1,0);
@@ -67,15 +74,15 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   }
   setState(selected:number,count:number): void {
     this.selected=selected; this.count=count;
-    if (this.status) this.status.text=["Camera","Light","Notepad"][selected]+" ready  ·  "+count+" placed";
-    this.selectionLabels.forEach((label,i)=> {label.text=(i===selected?"• ":"")+["Camera","Light","Notepad"][i]});
+    if (this.status) this.status.text=TOOL_NAMES[selected]+" ready  ·  "+count+" placed";
+    this.selectionLabels.forEach((label,i)=> {label.text=(i===selected?"• ":"")+TOOL_NAMES[i]});
   }
   setSharedStatus(text:string):void {if(this.sharedStatus)this.sharedStatus.text=text;}
   setHint(hint:string):void { if(this.status) this.status.text=hint; }
 
   /** Labels are views only; caller owns position, lifetime, and interaction state. */
-  decorateMarker(root:SceneObject,label:string,note:boolean): void {
-    const host=this.obj(root,note?"Notepad card":"Marker label",new vec3(0,note?0:-7,4));
+  decorateMarker(root:SceneObject,label:string,note:boolean,labelY=-7): void {
+    const host=this.obj(root,note?"Notepad card":"Marker label",new vec3(0,note?0:labelY,4));
     host.createComponent("Component.Canvas");
     const back=host.createComponent(BackPlate.getTypeName()) as BackPlate;
     back.size=new vec2(note?18:16,note?11:3.2);

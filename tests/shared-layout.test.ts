@@ -34,3 +34,12 @@ test('opening an empty shared session never overwrites it and reports missing sa
  const db=new Map<string,string>();const b=client(db,true);b.c.connect();let changed=false;b.c.load(()=>{changed=true;});
  expect(changed).toBe(false);expect(db.size).toBe(0);expect(b.status()).toContain('NotFound');
 });
+
+test('actor types survive shared-layout decoding',()=>{
+ for (const kind of [3,4]) {
+  const raw=JSON.parse(layout); raw.markers[0].kind=kind;
+  expect(parseLayout(JSON.stringify(raw)).markers[0].kind).toBe(kind);
+ }
+ const raw=JSON.parse(layout); raw.markers[0].kind=5;
+ expect(()=>parseLayout(JSON.stringify(raw))).toThrow();
+});

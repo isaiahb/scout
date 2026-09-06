@@ -9,6 +9,9 @@ import {Interactor,InteractorInputType} from "SpectaclesInteractionKit.lspkg/Cor
 
 import {HandInputData} from "SpectaclesInteractionKit.lspkg/Providers/HandInputData/HandInputData";
 
+const MODEL_HEIGHTS=[145,165,30,170,125];
+const TOOL_NAMES=["Camera","Light","Note","Standing","Seated"];
+
 const SELECT=requireAsset("../GeneratedSFX/ScoutSelect.wav") as AudioTrackAsset;
 const PLACE=requireAsset("../GeneratedSFX/ScoutPlace.wav") as AudioTrackAsset;
 
@@ -20,12 +23,16 @@ export class ScoutMain extends BaseScriptComponent {
   @input @hint("Authored placement preview") placementPreview:SceneObject;
   @input @hint("World tracking camera") camera:Camera;
   @input @hint("Vertex color material") markerMaterial:Material;
-  @input @hint("Distance from the camera for midair placement, centimeters") @widget(new SliderWidget(70,200,5)) placementDistance:number=110;
+  @input @hint("Distance from the camera for midair placement, centimeters") @widget(new SliderWidget(100,500,10)) placementDistance:number=300;
   @input @hint("Maximum markers kept in this sandbox") @widget(new SliderWidget(1,30,1)) maxMarkers:number=20;
   @input @hint("Show collider wireframes for learning and debugging") debugColliders:boolean=false;
   @input @hint("Volume of select and placement cues") @widget(new SliderWidget(0,1,0.05)) sfxVolume:number=0.25;
   @input connectedLensModule:ConnectedLensModule;
   @input cloudStorageModule:CloudStorageModule;
+  @input @allowUndefined cameraPrefab:ObjectPrefab;
+  @input @allowUndefined lightPrefab:ObjectPrefab;
+  @input @allowUndefined standingPrefab:ObjectPrefab;
+  @input @allowUndefined seatedPrefab:ObjectPrefab;
   private shared:ScoutSharedSession;
   private kinds:number[]=[];
   private selected=0;
@@ -60,7 +67,7 @@ export class ScoutMain extends BaseScriptComponent {
       this.palette.onRecover.add(()=>{this.lastAction=getTime();this.shared.load(raw=>this.restore(raw));});
     }
     this.rebuildPreview();this.refresh();this.ready=true;
-    console.log("Scout ready: choose Camera, Light, or Notepad; pinch empty space to place.");
+    console.log("Scout ready: choose equipment, notes, or actors; pinch empty space to place.");
   }
   private audio(track:AudioTrackAsset):AudioComponent {
     const audio=this.sceneObject.createComponent("Component.AudioComponent") as AudioComponent;
@@ -68,7 +75,12 @@ export class ScoutMain extends BaseScriptComponent {
   }
   private rebuildPreview():void {
     if(this.previewShape&&!isNull(this.previewShape))this.previewShape.destroy();
-    this.previewShape=buildMarkerMesh(this.placementPreview,this.selected,this.markerMaterial,true);
+    const prefab=this.prefabFor(this.selected);
+    if(prefab){
+      this.previewShape=prefab.instantiate(this.placementPreview);
+      // A small cursor model indicates the selected tool without hiding the venue.
+      this.previewShape.getTransform().setLocalPosition(new vec3(0,-15,0));
+    }else this.previewShape=buildMarkerMesh(this.placementPreview,this.selected,this.markerMaterial,true);
   }
   private update():void {
     if(!this.ready)return;
@@ -106,7 +118,7 @@ export class ScoutMain extends BaseScriptComponent {
       const forward=cam.forward.uniformScale(-1);
       const denom=direction.dot(forward);
       const t=denom>0.1?(this.placementDistance-start.sub(cam.getWorldPosition()).dot(forward))/denom:this.placementDistance;
-      return start.add(direction.uniformScale(Math.max(20,Math.min(250,t))));
+      return start.add(direction.uniformScale(Math.max(20,Math.min(500,t))));
     }
     return cam.getWorldPosition().add(cam.forward.uniformScale(-this.placementDistance));
   }
@@ -114,19 +126,26 @@ export class ScoutMain extends BaseScriptComponent {
     if(this.placed.length>=this.maxMarkers){this.palette.setHint("Marker limit reached — Undo or Clear All");return}
     this.lastAction=getTime();
     const kind=this.selected;
-    const label=["Camera","Light","Note"][kind]+" "+String(++this.sequence).padStart(2,"0");
+    const label=TOOL_NAMES[kind]+" "+String(++this.sequence).padStart(2,"0");
     const root=this.makeMarker(kind,label);
     root.getTransform().setWorldPosition(position);
-    root.getTransform().setWorldRotation(this.camera.getTransform().getWorldRotation());
+    const f=this.camera.getTransform().forward;
+    root.getTransform().setWorldRotation(quat.angleAxis(Math.atan2(f.x,f.z),vec3.up()));
     this.placeAudio.play(1);this.refresh();
     console.log("Scout placed "+label);
   }
+  private prefabFor(kind:number):ObjectPrefab {return [this.cameraPrefab,this.lightPrefab,null,this.standingPrefab,this.seatedPrefab][kind];}
   private makeMarker(kind:number,label:string):SceneObject {
     const root=global.scene.createSceneObject(label);root.setParent(this.markers);
-    if(kind!==2)buildMarkerMesh(root,kind,this.markerMaterial,false);
-    this.palette.decorateMarker(root,label,kind===2);
+    const prefab=this.prefabFor(kind),height=MODEL_HEIGHTS[kind];
+    if(prefab){
+      const model=prefab.instantiate(root),t=model.getTransform();
+      t.setLocalScale(t.getLocalScale().uniformScale(height/30));
+      t.setLocalPosition(new vec3(0,-height/2,0));
+    }else if(kind!==2)buildMarkerMesh(root,kind,this.markerMaterial,false);
+    this.palette.decorateMarker(root,label,kind===2,kind===2?0:height/2+8);
     const col=root.createComponent("Physics.ColliderComponent") as ColliderComponent;
-    const shape=Shape.createBoxShape();shape.size=kind===2?new vec3(18,11,10):new vec3(11,16,11);
+    const shape=Shape.createBoxShape();shape.size=kind===2?new vec3(18,11,10):new vec3(kind>=3?55:70,height,kind>=3?55:70);
     col.shape=shape;col.debugDrawEnabled=this.debugColliders;
     const interactable=root.createComponent(Interactable.getTypeName()) as Interactable;
     interactable.targetingMode=3;

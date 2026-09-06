@@ -6,3 +6,5 @@
 - **Lens Studio packages and default assets**: provided by Snap through Lens Studio / Asset Library. These retain their upstream terms and are not relicensed by this repository.
 
 Scout selection and placement sound effects were synthesized for this project.
+
+The four camera, studio light, standing actor, and seated actor models were supplied by a project collaborator as generated assets. Scout includes optimized GLB versions with reduced geometry and textures; no additional license grant is implied by this notice.

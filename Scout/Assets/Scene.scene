@@ -2597,7 +2597,6 @@
   Enabled: true
   ScriptAsset: !<reference> 40fc4622-81a8-4e5e-9684-63f339bbfc34
   ScriptInputsDefault:
-    placementDistance: true
     maxMarkers: true
     debugColliders: true
     sfxVolume: true
@@ -2610,12 +2609,16 @@
       placementPreview: !<reference.SceneObject> 1fe4c77b-acf6-4a30-a098-405c3619286a
       camera: !<reference.Camera> 00000000-0000-0065-0000-000000000065
       markerMaterial: !<reference.Material> 70d03593-c7b4-410a-ae5c-75cb82ee32dc
-      placementDistance: !<float> 110.000000
+      placementDistance: !<float> 300.000000
       maxMarkers: !<float> 20.000000
       debugColliders: false
       sfxVolume: 0.250000
       connectedLensModule: !<reference.ConnectedLensModule> 6850a1d4-ed92-419f-91c9-198f3e16ae2f
       cloudStorageModule: !<reference.CloudStorageModule> fc12b1c4-e52d-4334-ad8f-cb88153dd421
+      cameraPrefab: !<reference.ObjectPrefab> a8d16f6b-67d2-4c0a-8a67-0653fba6f125
+      lightPrefab: !<reference.ObjectPrefab> 8a4d422b-8fad-4cdc-9f95-c0a9a30a6027
+      standingPrefab: !<reference.ObjectPrefab> ef8de357-600f-4e3e-bf56-86e692a66f9d
+      seatedPrefab: !<reference.ObjectPrefab> 52dada4a-a82e-4212-bfd1-bc72b650c41f
   ScriptTypes:
     "":
       {}

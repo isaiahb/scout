@@ -1,0 +1,133 @@
+- !<AssetImportMetadata/d4101825-2d0a-41a6-8ce7-dd684b7516bb>
+  ImportedAssetIds:
+    .hidden/VioletMaterial: !<reference> ad0d0f24-6abc-428e-bbea-d9dabad065a8
+    07c3d5b19ae898b3: !<reference> f2057a22-d6f8-477b-94ce-8ecc628a3536
+    26ba073d67b9d0dd: !<reference> 99557a96-cc3c-40d2-bdbd-ce21e6b31e5c
+    6419cfb46a0d0f75: !<reference> d432bf6e-0810-4584-b665-209feb646b9c
+    657c264db4d38ac9: !<reference> 1b9a4e7e-d8f6-4557-9799-89e6a18ceb6d
+    88ab437fd121cc69: !<reference> 1a31feb9-c8de-4bd4-afa6-6c73630292bd
+    Materials/VioletMaterial: !<reference> c5bfe75a-9ef9-4c5d-b761-0cab5b0d7a03
+    Materials/VioletMaterial|VioletMaterial|GraphPassInfo: !<reference> 14f6cba8-6fa3-4c80-83e6-fc28eee9378c
+    Meshes/VioletMesh: !<reference> 078c5522-f304-4e30-bcb0-0a2d800a1d6b
+    Scene: !<reference> ef8de357-600f-4e3e-bf56-86e692a66f9d
+    Textures/VioletBaseColor: !<reference> 3862f59c-b390-4506-bdd7-d10581d63941
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> ef8de357-600f-4e3e-bf56-86e692a66f9d
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> 66b129e6-c445-47de-b57f-7b2bfed1eba4
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      png: Performance Compression
+    Overrides:
+      {}
+- !<SceneObject/1a31feb9-c8de-4bd4-5059-938c9cfd6d42>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 1b9a4e7e-d8f6-4557-6866-76195e731492
+  Components:
+    []
+- !<SceneObject/1b9a4e7e-d8f6-4557-6866-76195e731492>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> d432bf6e-0810-4584-499a-df60149b9463
+  Components:
+    []
+- !<ObjectPrefabAssetData/66b129e6-c445-47de-b57f-7b2bfed1eba4>
+  Prototype: !<ObjectOwner/4bab7347-76d7-41dc-9e1d-a912fb84fefc>
+    PackagePath: ""
+    objects:
+      - !<own> 99557a96-cc3c-40d2-4242-31de194ce1a3
+- !<SceneObject/99557a96-cc3c-40d2-4242-31de194ce1a3>
+  PrefabRemaps:
+    []
+  Name: Violet
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 1a31feb9-c8de-4bd4-5059-938c9cfd6d42
+  Components:
+    []
+- !<SceneObject/d432bf6e-0810-4584-499a-df60149b9463>
+  PrefabRemaps:
+    []
+  Name: Violet
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> f2057a22-d6f8-477b-6b31-71339d75cac9
+- !<RenderMeshVisual/f2057a22-d6f8-477b-6b31-71339d75cac9>
+  PrefabRemaps:
+    []
+  Name: VioletMesh
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> c5bfe75a-9ef9-4c5d-b761-0cab5b0d7a03
+  Mesh: !<reference> 078c5522-f304-4e30-bcb0-0a2d800a1d6b
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
