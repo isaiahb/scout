@@ -2,6 +2,12 @@
 
 A spatial pre-production prototype for filmmakers: select a camera, light, note, standing actor, or seated actor, place it in space, and move it while planning a scene.
 
+## Tonight’s Specs demo
+
+The primary demo is `Scout/Scout.esproj` in Lens Studio’s Specs interactive preview: place equipment and actors, grab to move or rotate, then record a walkthrough from multiple viewpoints. Share the recording as a visual setup brief. The mobile project is retained as an earlier experiment.
+
+Shared-session controls are experimental and hidden by default (`showSharedControls` on ScoutPaletteUI). This demo does not require account sharing or room relocalization.
+
 ## Two Lens Studio projects
 
 | Project | Device | Controls |
