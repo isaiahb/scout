@@ -10,6 +10,10 @@ import {Interactor,InteractorInputType} from "SpectaclesInteractionKit.lspkg/Cor
 
 import {HandInputData} from "SpectaclesInteractionKit.lspkg/Providers/HandInputData/HandInputData";
 import {IMAGE_MATERIAL_ASSET} from "SpectaclesUIKit.lspkg/Scripts/Utility/Assets";
+import {CameraAssetState, LightAssetState, defaultCameraState, defaultLightState, KELVIN_STOPS, INTENSITY_STOPS, kelvinToRGB} from "./ScoutAssetState";
+
+/** The exact runtime hooks one placed Light asset needs so its dials can affect something real. */
+type LightMarkerRef={light:LightSource;glowVisual:RenderMeshVisual};
 
 /** Imported GLB prefabs are wrapped in empty "Scenes"/"Scene" nodes — the actual RenderMeshVisual is
  * nested a level or two below the instantiate() root, not on it. */
@@ -45,7 +49,7 @@ const MODEL_HEIGHTS=[145,165,30,170,125];
 // lands exactly where the panel is. Measured directly off Light.glb's mesh (the panel is the y>0.17
 // band of the raw vertex data).
 const KEY_LIGHT_OFFSET=new vec3(0.0095,0.235,0.08);
-const KEY_LIGHT_COLOR=new vec3(0xfd/255,0xfb/255,0xf7/255); // neutral daylight white
+// "100%" baseline for the Light asset's Intensity dial — the light's original always-on brightness.
 const KEY_LIGHT_INTENSITY=1;
 // Real key light stands are elevated and angled down toward the subject; without this the beam aims
 // dead level and sails clean over anyone shorter than the panel (measured ~32° miss against a seated
@@ -62,7 +66,6 @@ const KEY_LIGHT_TILT_DOWN=30*Math.PI/180;
 // the reflector, visible through the opening, without poking past its rim from most viewing angles.
 const GLOW_OFFSET=new vec3(0.009,0.25,0.038);
 const GLOW_RADIUS=0.016;
-const GLOW_COLOR=[1,0.97,0.9,1];
 const TOOL_NAMES=["Camera","Light","Note","Standing","Seated"];
 const PALETTE_DISTANCE=110;
 const PALETTE_HEIGHT_OFFSET=-14;
@@ -96,6 +99,12 @@ export class ScoutMain extends BaseScriptComponent {
   private shared:ScoutSharedSession;
   private kinds:number[]=[];
   private groundY:number[]=[];
+  // Camera and Light are two separate state systems — separate types, separate arrays — that only
+  // happen to be indexed in parallel with `placed`/`kinds`. Each entry is a fresh object made by
+  // defaultCameraState()/defaultLightState() per marker, so no two assets can ever share one.
+  private cameraStates:(CameraAssetState|null)[]=[];
+  private lightStates:(LightAssetState|null)[]=[];
+  private lightRefs:(LightMarkerRef|null)[]=[];
   private selected=0;
   private editing:SceneObject=null;
   private gizmo:ScoutTransformGizmo;
@@ -306,11 +315,14 @@ export class ScoutMain extends BaseScriptComponent {
   private makeMarker(kind:number,label:string,groundY:number):SceneObject {
     const root=global.scene.createSceneObject(label);root.setParent(this.markers);
     const prefab=this.prefabFor(kind),height=MODEL_HEIGHTS[kind];
+    const cameraState=kind===0?defaultCameraState():null;
+    const lightState=kind===1?defaultLightState():null;
+    let lightRef:LightMarkerRef|null=null;
     if(prefab){
       const model=prefab.instantiate(root),t=model.getTransform();
       t.setLocalScale(t.getLocalScale().uniformScale(height/30));
       t.setLocalPosition(new vec3(0,-height/2,0));
-      if(kind===1)this.buildKeyLight(model);
+      if(lightState)lightRef=this.buildKeyLight(model,lightState);
       // Standing/seated subjects both cast and receive shadows on themselves so a nearby key light
       // actually shows contours (nose, contact shadows) on the subject, not just floodlighting it.
       if(kind===3||kind===4){
@@ -318,7 +330,20 @@ export class ScoutMain extends BaseScriptComponent {
         if(visual)visual.meshShadowMode=MeshShadowMode.Both;
       }
     }else if(kind!==2)buildMarkerMesh(root,kind,this.markerMaterial,false);
-    this.palette.decorateMarker(root,label,kind===2,kind===2?0:height/2+8,()=>this.editMarker(root),()=>this.deleteMarker(root));
+    const labelY=kind===2?0:height/2+8;
+    this.palette.decorateMarker(root,label,kind===2,labelY,()=>this.editMarker(root),()=>this.deleteMarker(root));
+    // Two separate systems by design: Camera dials are informational only (no real-world effect is
+    // requested for them); Light dials drive the marker's own LightSource/glow directly by closing
+    // over `lightRef` — never an array index, so a later deletion of some other marker can't leave
+    // this callback pointing at the wrong asset.
+    if(cameraState)this.palette.buildCameraControls(root,labelY,cameraState,patch=>Object.assign(cameraState,patch));
+    if(lightState){
+      const ref=lightRef;
+      this.palette.buildLightControls(root,labelY,lightState,patch=>{
+        Object.assign(lightState,patch);
+        if(ref)this.applyLightLook(ref,lightState);
+      });
+    }
     const col=root.createComponent("Physics.ColliderComponent") as ColliderComponent;
     const shape=Shape.createBoxShape();shape.size=kind===2?new vec3(18,11,10):new vec3(kind>=3?55:70,height,kind>=3?55:70);
     col.shape=shape;col.debugDrawEnabled=this.debugColliders;
@@ -328,12 +353,15 @@ export class ScoutMain extends BaseScriptComponent {
     const manipulation=root.createComponent(InteractableManipulation.getTypeName()) as InteractableManipulation;
     manipulation.setCanScale(false);
     manipulation.setCanRotate(false);
-    this.placed.push(root);this.kinds.push(kind);this.groundY.push(groundY);return root;
+    this.placed.push(root);this.kinds.push(kind);this.groundY.push(groundY);
+    this.cameraStates.push(cameraState);this.lightStates.push(lightState);this.lightRefs.push(lightRef);
+    return root;
   }
   /** Real-time light on the Light prop so it actually illuminates the scene and casts a shadow, aimed
    * out of the softbox opening (model's local +Z, matching the root −Z / child +Z depth idiom used
-   * everywhere placed props are oriented). */
-  private buildKeyLight(model:SceneObject):void {
+   * everywhere placed props are oriented). Color/intensity are set by applyLightLook, driven by this
+   * specific instance's own LightAssetState — never a shared constant. */
+  private buildKeyLight(model:SceneObject,state:LightAssetState):LightMarkerRef {
     const bulb=global.scene.createSceneObject("Bulb");bulb.setParent(model);
     bulb.getTransform().setLocalPosition(KEY_LIGHT_OFFSET);
     // Tilt is applied later, in spawnMarker/restore — at this point the marker root hasn't been given
@@ -348,10 +376,11 @@ export class ScoutMain extends BaseScriptComponent {
     // one angle rather than falling off near the stand — but it's the only combination that actually
     // shows both illumination and a cast shadow on a subject.
     light.lightType=LightType.Directional;
-    light.color=KEY_LIGHT_COLOR;
-    light.intensity=KEY_LIGHT_INTENSITY;
     light.shadowType=ShadowType.ShadowMap;
-    this.buildGlowDisc(model);
+    const glowVisual=this.buildGlowDisc(model);
+    const ref:LightMarkerRef={light,glowVisual};
+    this.applyLightLook(ref,state);
+    return ref;
   }
   /** A small brightly-colored sphere standing in for the softbox's diffuser panel actually glowing.
    * Light.glb shares one material across the whole prop (housing + stand + panel), so tinting that
@@ -359,11 +388,25 @@ export class ScoutMain extends BaseScriptComponent {
    * bulb just in front of the real panel instead of touching the shared GLB material. A sphere rather
    * than a flat disc: the GLB's "Scenes"/"Scene" wrapper nodes may carry a rotation not visible in the
    * raw vertex data, so a flat disc's facing direction can't be trusted — a sphere reads correctly
-   * from any angle. */
-  private buildGlowDisc(model:SceneObject):void {
+   * from any angle. Mesh is left empty here; applyLightLook populates it with the instance's own color. */
+  private buildGlowDisc(model:SceneObject):RenderMeshVisual {
     const glow=global.scene.createSceneObject("Glow");glow.setParent(model);
     glow.getTransform().setLocalPosition(GLOW_OFFSET);
     const visual=glow.createComponent("Component.RenderMeshVisual") as RenderMeshVisual;
+    visual.mainMaterial=this.markerMaterial.clone();
+    return visual;
+  }
+  /** Applies one Light asset's own Kelvin/Intensity dial state to its real LightSource and glow sphere.
+   * The only two dials in this whole feature that actually affect anything, per explicit instruction. */
+  private applyLightLook(ref:LightMarkerRef,state:LightAssetState):void {
+    const kelvin=KELVIN_STOPS[state.kelvinIndex].value;
+    const pct=INTENSITY_STOPS[state.intensityIndex].value/100;
+    const rgb=kelvinToRGB(kelvin);
+    ref.light.intensity=KEY_LIGHT_INTENSITY*pct;
+    ref.light.color=rgb;
+    this.rebuildGlowMesh(ref.glowVisual,[rgb.x*pct,rgb.y*pct,rgb.z*pct,1]);
+  }
+  private rebuildGlowMesh(visual:RenderMeshVisual,color:[number,number,number,number]):void {
     const b=new MeshBuilder([{name:"position",components:3},{name:"normal",components:3,normalized:true},{name:"color",components:4}]);
     b.topology=MeshTopology.Triangles;b.indexType=MeshIndexType.UInt16;
     const lat=8,lon=12;
@@ -373,7 +416,7 @@ export class ScoutMain extends BaseScriptComponent {
     };
     let vi=0;
     const addTri=(a:number[],b2:number[],c:number[])=>{
-      [a,b2,c].forEach(p=>b.appendVerticesInterleaved([p[0]*GLOW_RADIUS,p[1]*GLOW_RADIUS,p[2]*GLOW_RADIUS, p[0],p[1],p[2], ...GLOW_COLOR]));
+      [a,b2,c].forEach(p=>b.appendVerticesInterleaved([p[0]*GLOW_RADIUS,p[1]*GLOW_RADIUS,p[2]*GLOW_RADIUS, p[0],p[1],p[2], ...color]));
       b.appendIndices([vi,vi+1,vi+2]);vi+=3;
     };
     for(let i=0;i<lat;i++)for(let j=0;j<lon;j++){
@@ -381,7 +424,6 @@ export class ScoutMain extends BaseScriptComponent {
       addTri(p00,p11,p10);addTri(p00,p01,p11);
     }
     visual.mesh=b.getMesh();
-    visual.mainMaterial=this.markerMaterial.clone();
     b.updateMesh();
   }
   /** Toggles the constrained-axis handles for one specific asset; vertical movement only applies to standing/seated actors. */
@@ -400,17 +442,21 @@ export class ScoutMain extends BaseScriptComponent {
     const idx=this.placed.indexOf(root);
     if(idx<0)return;
     this.placed.splice(idx,1);this.kinds.splice(idx,1);this.groundY.splice(idx,1);
+    this.cameraStates.splice(idx,1);this.lightStates.splice(idx,1);this.lightRefs.splice(idx,1);
     if(!isNull(root))root.destroy();
     this.selectAudio.play(1);this.refresh();
   }
   private undo():void {
     this.lastAction=getTime();const obj=this.placed.pop();this.kinds.pop();this.groundY.pop();
+    this.cameraStates.pop();this.lightStates.pop();this.lightRefs.pop();
     if(obj&&!isNull(obj))obj.destroy();this.selectAudio.play(1);this.refresh();
     console.log("Scout undo: "+this.placed.length+" markers remain");
   }
   private clear():void {
     this.lastAction=getTime();this.placed.forEach(obj=>{if(!isNull(obj))obj.destroy()});
-    this.placed=[];this.kinds=[];this.groundY=[];this.selectAudio.play(1);this.refresh();console.log("Scout cleared");
+    this.placed=[];this.kinds=[];this.groundY=[];
+    this.cameraStates=[];this.lightStates=[];this.lightRefs=[];
+    this.selectAudio.play(1);this.refresh();console.log("Scout cleared");
   }
   private snapshot():string {
     const data:ScoutLayout={version:1,frame:'manual',markers:this.placed.map((obj,i)=>{

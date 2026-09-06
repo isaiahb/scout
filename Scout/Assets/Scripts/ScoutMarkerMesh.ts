@@ -29,7 +29,7 @@ export function buildMarkerMesh(parent:SceneObject, kind:number, material:Materi
   return root;
 }
 
-function addBox(
+export function addBox(
   builder: MeshBuilder,
   indices: number[],
   cx: number, cy: number, cz: number,

@@ -5,6 +5,8 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem";
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes";
 import {IMAGE_MATERIAL_ASSET} from "SpectaclesUIKit.lspkg/Scripts/Utility/Assets";
+import {ScoutRotaryDial, RotaryDialTheme, DialStep} from "./ScoutRotaryDial";
+import {CameraAssetState, LightAssetState, ISO_STOPS, APERTURE_STOPS, SHUTTER_STOPS, KELVIN_STOPS, INTENSITY_STOPS, kelvinToRGB} from "./ScoutAssetState";
 
 const ICONS: Texture[] = [requireAsset("../Icons/videocam.png") as Texture, requireAsset("../Icons/lightbulb.png") as Texture, requireAsset("../Icons/sticky_note_2.png") as Texture, requireAsset("../Icons/undo.png") as Texture, requireAsset("../Icons/delete.png") as Texture];
 const ACTOR_ICONS:Texture[]=[requireAsset("../Icons/person.png") as Texture,requireAsset("../Icons/chair.png") as Texture];
@@ -21,6 +23,13 @@ const LOGO_HEIGHT=8,LOGO_WIDTH=16.9;
 const PANEL_TINT=new vec4(0x3e/255,0x30/255,0x82/255,1);
 const BUTTON_TINT=new vec4(0x24/255,0x17/255,0x4d/255,1);
 const TEXT_TINT=new vec4(0xc1/255,0xad/255,0xff/255,1);
+// Rotary dial rings read as gear, not menu — neutral gunmetal grey matching the camera/light housings,
+// not the palette's purple/cyan theme.
+const DIAL_IDLE_TINT=new vec4(0.24,0.24,0.26,1);
+const DIAL_HOVER_TINT=new vec4(0.38,0.38,0.41,1);
+const DIAL_ACTIVE_TINT=new vec4(0.55,0.55,0.58,1);
+const DIAL_TICK_TINT=new vec4(0.5,0.5,0.52,1);
+const DIAL_PANEL_TINT=new vec4(0.12,0.12,0.13,1);
 const PANEL_RADIUS=2.6,BUTTON_RADIUS=1.4;
 const CAP_WIDTH=6,CAP_HEIGHT=14;
 const TOOLBAR_ICON=6,TOOLBAR_GAP=1.2,TOOLBAR_COUNT=4;
@@ -28,6 +37,11 @@ const COLLAPSED_SIZE=new vec2(TOOLBAR_ICON+3,TOOLBAR_COUNT*TOOLBAR_ICON+(TOOLBAR
 const TOOL_NAMES=["Camera","Light","Notepad","Standing","Seated"];
 const THEME_FONT=requireAsset("../Fonts/Inter.ttf") as Font;
 const TYPE_SCALE = {Title2:{size:93,weight:700},Body:{size:52,weight:600},Caption:{size:44,weight:500}};
+/** WB/Kelvin dials fill their ring's hole with the color that Kelvin value represents. */
+function kelvinFill(kelvin:number):vec4 {
+  const rgb=kelvinToRGB(kelvin);
+  return new vec4(rgb.x,rgb.y,rgb.z,1);
+}
 function applyTextRole(t: Text, role: keyof typeof TYPE_SCALE): void {
   t.font=THEME_FONT;
   t.size = TYPE_SCALE[role].size;
@@ -212,6 +226,64 @@ export class ScoutPaletteUI extends BaseScriptComponent {
       this.textRow(col,this.noteText,16.6,3.5,"Body");
       this.textRow(col,"Pinch + drag to move",16.6,1.8,"Caption");
     }
+  }
+  /** Compact ISO/Aperture/Shutter/WB dial row for one placed Camera asset — purely informational, no
+   * dial here drives a real effect (see AGENTS request: only the Light asset's dials do). */
+  buildCameraControls(root:SceneObject,labelY:number,state:CameraAssetState,onChange:(patch:Partial<CameraAssetState>)=>void):void {
+    this.buildControlsRow(root,labelY,38,[
+      {label:"ISO",steps:ISO_STOPS,initialIndex:state.isoIndex,onChange:i=>onChange({isoIndex:i})},
+      {label:"Aperture",steps:APERTURE_STOPS,initialIndex:state.apertureIndex,onChange:i=>onChange({apertureIndex:i})},
+      {label:"Shutter",steps:SHUTTER_STOPS,initialIndex:state.shutterIndex,onChange:i=>onChange({shutterIndex:i})},
+      {label:"WB",steps:KELVIN_STOPS,initialIndex:state.kelvinIndex,onChange:i=>onChange({kelvinIndex:i}),fillColorForValue:kelvinFill},
+    ]);
+  }
+  /** Compact Intensity/Kelvin dial row for one placed Light asset — both dials drive the marker's
+   * real-time LightSource via ScoutMain.applyLightLook. */
+  buildLightControls(root:SceneObject,labelY:number,state:LightAssetState,onChange:(patch:Partial<LightAssetState>)=>void):void {
+    this.buildControlsRow(root,labelY,20,[
+      {label:"Intensity",steps:INTENSITY_STOPS,initialIndex:state.intensityIndex,onChange:i=>onChange({intensityIndex:i})},
+      {label:"Kelvin",steps:KELVIN_STOPS,initialIndex:state.kelvinIndex,onChange:i=>onChange({kelvinIndex:i}),fillColorForValue:kelvinFill},
+    ]);
+  }
+  /** Shared visual plumbing behind buildCameraControls/buildLightControls — a small BackPlate panel,
+   * floating above the marker's existing label card (never replacing it), hosting a row of RotaryDials.
+   * Camera and Light keep their own public methods/types above; only this rendering helper is shared. */
+  private buildControlsRow(root:SceneObject,labelY:number,rowWidth:number,dials:{label:string;steps:DialStep[];initialIndex:number;onChange:(index:number)=>void;fillColorForValue?:(value:number)=>vec4}[]):void {
+    if(!this.badgeMaterial)return; // same guard sphereButton uses — set once in ScoutMain.start(), before any marker exists
+    const material=this.badgeMaterial;
+    const dialRadius=3.2;
+    const panelH=dialRadius*2+9;
+    const labelCardHalfHeight=1.6,gap=2;
+    const y=labelY+labelCardHalfHeight+gap+panelH/2;
+    const host=this.obj(root,"Asset controls",new vec3(0,y,4));
+    host.createComponent("Component.Canvas");
+    const back=host.createComponent(BackPlate.getTypeName()) as BackPlate;
+    back.style="simple";
+    back.size=new vec2(rowWidth,panelH);
+    back.onInitialized.add(()=>{
+      // Neutral dark gear-grey, not the palette's purple PANEL_TINT — this backdrop is the physical
+      // gear's own control panel, not menu chrome, so it should read as equipment, not UI.
+      this.style(back,DIAL_PANEL_TINT,PANEL_RADIUS);
+      back.interactable.enabled=false;
+      back.interactionPlane.enabled=false;
+      // Mirrors decorateMarker's own defensive sweep: BackPlate's stray collider(s) would otherwise sit
+      // in front of (and block) the dials' own colliders. Exempt DialKnob nodes so drag still works.
+      const disable=this.createEvent("DelayedCallbackEvent");
+      disable.bind(()=>{
+        const visit=(node:SceneObject)=>{
+          if(node.name==="DialKnob")return;
+          node.getComponents("Physics.ColliderComponent").forEach(c=>c.enabled=false);
+          for(let i=0;i<node.getChildrenCount();i++)visit(node.getChild(i));
+        };visit(host);
+      });disable.reset(0.1);
+    });
+    const content=this.obj(host,"ControlsContent",new vec3(0,0,0.5));
+    const theme:RotaryDialTheme={font:THEME_FONT,textColor:TEXT_TINT,idleColor:DIAL_IDLE_TINT,hoverColor:DIAL_HOVER_TINT,activeColor:DIAL_ACTIVE_TINT,tickColor:DIAL_TICK_TINT};
+    const spacing=rowWidth/dials.length;
+    dials.forEach((d,i)=>{
+      const x=-rowWidth/2+spacing*(i+0.5);
+      new ScoutRotaryDial(content,new vec3(x,0,0),material,theme,{label:d.label,steps:d.steps,initialIndex:d.initialIndex,radius:dialRadius,onChange:idx=>d.onChange(idx),fillColorForValue:d.fillColorForValue});
+    });
   }
   /** Mascot + wordmark, always the first row of the expanded panel. */
   private headerRow(parent:SceneObject):void {
