@@ -1,0 +1,70 @@
+- !<AssetImportMetadata/c528e0b0-e2e1-4233-b790-0eb02793bd23>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 40fc4622-81a8-4e5e-9684-63f339bbfc34
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 40fc4622-81a8-4e5e-9684-63f339bbfc34
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 9b42015f-76c3-415b-9783-c54590836f31
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/9b42015f-76c3-415b-9783-c54590836f31>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 7a67c156-da89-48d3-b6d0-79235e6d6690
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    camera: false
+    debugColliders: false
+    markerMaterial: false
+    markers: false
+    maxMarkers: false
+    palette: false
+    placementDistance: false
+    placementPreview: false
+    sfxVolume: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - palette: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      markers: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      placementPreview: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      camera: !<reference.Camera> 00000000-0000-0000-0000-000000000000
+      markerMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
+      placementDistance: !<float> 110.000000
+      maxMarkers: !<float> 20.000000
+      debugColliders: false
+      sfxVolume: 0.250000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @input AssignableType_1 palette {"hint":"Palette view"}'
+    - '// @input SceneObject markers {"hint":"Authored parent for placed markers"}'
+    - '// @input SceneObject placementPreview {"hint":"Authored placement preview"}'
+    - '// @input Component.Camera camera {"hint":"World tracking camera"}'
+    - '// @input Asset.Material markerMaterial {"hint":"Vertex color material"}'
+    - '// @input float placementDistance = 110 {"hint":"Distance from the camera for midair placement, centimeters", "widget":"slider", "min":70, "max":200, "step":5}'
+    - '// @input float maxMarkers = 20 {"hint":"Maximum markers kept in this sandbox", "widget":"slider", "min":1, "max":30, "step":1}'
+    - '// @input bool debugColliders {"hint":"Show collider wireframes for learning and debugging"}'
+    - '// @input float sfxVolume = 0.25 {"hint":"Volume of select and placement cues", "widget":"slider", "min":0, "max":1, "step":0.05}'

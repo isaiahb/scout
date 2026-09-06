@@ -1,0 +1,52 @@
+- !<AssetImportMetadata/39a6be1d-a7d4-4e87-ab82-5d08f96f17dc>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 08499c3f-2782-44f7-894c-061842825339
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 08499c3f-2782-44f7-894c-061842825339
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 25890989-c440-43fe-b71b-e793c1811048
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/25890989-c440-43fe-b71b-e793c1811048>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 2f7d0136-3626-4ff6-ad9d-b2f05cdfc38b
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    accent: false
+    noteText: false
+    title: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - title: scout
+      noteText: Check this angle
+      accent: !<Vec4> {x: 0.450000, y: 0.900000, z: 0.950000, w: 1.000000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @input string title = "scout" {"hint":"Palette title"}'
+    - '// @input string noteText = "Check this angle" {"hint":"Placeholder shown on placed notepads"}'
+    - '// @input vec4 accent = {0.45,0.9,0.95,1} {"hint":"Bright accent for the current selection", "widget":"color"}'

@@ -15,6 +15,18 @@ transcripts/
 RESEARCH.md
 TONIGHT.md
 *.log
+.virtual-scene.json
+.virtual-scene*.json
+*.pem
+
+# Local editor and agent inspection output
+Cache/
+Support/
+PluginsUserPreferences/
+Workspaces/
+BackUp/
+.vscode/
+tempAssetGen/
 
 # Generated files
 .DS_Store
@@ -22,3 +34,6 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+
+# Lens Studio process locks
+*.lock
