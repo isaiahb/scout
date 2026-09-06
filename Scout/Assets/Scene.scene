@@ -978,7 +978,7 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: -22.000000, z: -110.000000}
+    Position: {x: 0.000000, y: -14.000000, z: -110.000000}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
     Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
     HasSegmentScaleCompensation: false
@@ -2614,6 +2614,8 @@
       maxMarkers: !<float> 20.000000
       debugColliders: false
       sfxVolume: 0.250000
+      connectedLensModule: !<reference.ConnectedLensModule> 6850a1d4-ed92-419f-91c9-198f3e16ae2f
+      cloudStorageModule: !<reference.CloudStorageModule> fc12b1c4-e52d-4334-ad8f-cb88153dd421
   ScriptTypes:
     "":
       {}

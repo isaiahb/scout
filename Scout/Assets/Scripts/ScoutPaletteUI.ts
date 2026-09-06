@@ -24,6 +24,11 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   onSelect = new Event<number>();
   onUndo = new Event<void>();
   onClear = new Event<void>();
+  onConnect = new Event<void>();
+  onInvite = new Event<void>();
+  onSave = new Event<void>();
+  onRecover = new Event<void>();
+  private sharedStatus:Text;
   private status: Text;
   private selectionLabels: ElementContent[] = [];
   private selected = 0;
@@ -35,9 +40,9 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   private build(): void {
     this.sceneObject.createComponent("Component.Canvas");
     const back = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate;
-    back.size = new vec2(46,23);
+    back.size = new vec2(46,33);
     const content = this.obj(this.sceneObject,"PaletteContent",new vec3(0,0,0.6));
-    const col = this.flex(content,FlexDirection.Column,46,23,1,2);
+    const col = this.flex(content,FlexDirection.Column,46,33,1,2);
     this.textRow(col,this.title,42,4,"Title2");
     this.status = this.textRow(col,"Camera ready  ·  0 placed",42,2,"Body");
     const types = this.child(col,"Marker types",42,6);
@@ -50,6 +55,13 @@ export class ScoutPaletteUI extends BaseScriptComponent {
     const actionRow = this.flex(actions,FlexDirection.Row,42,4.5,1,0);
     this.button(actionRow,"Undo Last",20.5,4.5,ICONS[3],()=>this.onUndo.invoke());
     this.button(actionRow,"Clear All",20.5,4.5,ICONS[4],()=>this.onClear.invoke());
+    const shared=this.child(col,"Shared layout",42,4.5);
+    const sharedRow=this.flex(shared,FlexDirection.Row,42,4.5,.6,0);
+    this.button(sharedRow,"Connect",10,4.5,null,()=>this.onConnect.invoke());
+    this.button(sharedRow,"Invite",10,4.5,null,()=>this.onInvite.invoke());
+    this.button(sharedRow,"Save",10,4.5,null,()=>this.onSave.invoke());
+    this.button(sharedRow,"Recover",10,4.5,null,()=>this.onRecover.invoke());
+    this.sharedStatus=this.textRow(col,"Shared layout • connect to begin",42,2,"Caption");
     this.textRow(col,"Pinch to place · Grab to move",42,2,"Caption");
     this.setState(this.selected,this.count);
   }
@@ -58,6 +70,7 @@ export class ScoutPaletteUI extends BaseScriptComponent {
     if (this.status) this.status.text=["Camera","Light","Notepad"][selected]+" ready  ·  "+count+" placed";
     this.selectionLabels.forEach((label,i)=> {label.text=(i===selected?"• ":"")+["Camera","Light","Notepad"][i]});
   }
+  setSharedStatus(text:string):void {if(this.sharedStatus)this.sharedStatus.text=text;}
   setHint(hint:string):void { if(this.status) this.status.text=hint; }
 
   /** Labels are views only; caller owns position, lifetime, and interaction state. */

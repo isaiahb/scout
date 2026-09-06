@@ -29,6 +29,8 @@
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
     camera: false
+    cloudStorageModule: false
+    connectedLensModule: false
     debugColliders: false
     markerMaterial: false
     markers: false
@@ -55,6 +57,8 @@
       maxMarkers: !<float> 20.000000
       debugColliders: false
       sfxVolume: 0.250000
+      connectedLensModule: !<reference.ConnectedLensModule> 00000000-0000-0000-0000-000000000000
+      cloudStorageModule: !<reference.CloudStorageModule> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -68,3 +72,5 @@
     - '// @input float maxMarkers = 20 {"hint":"Maximum markers kept in this sandbox", "widget":"slider", "min":1, "max":30, "step":1}'
     - '// @input bool debugColliders {"hint":"Show collider wireframes for learning and debugging"}'
     - '// @input float sfxVolume = 0.25 {"hint":"Volume of select and placement cues", "widget":"slider", "min":0, "max":1, "step":0.05}'
+    - // @input Asset.ConnectedLensModule connectedLensModule
+    - // @input Asset.CloudStorageModule cloudStorageModule

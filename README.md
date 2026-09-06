@@ -24,10 +24,27 @@ This sends a development preview; it does not publish the Lens publicly.
 
 Both projects have passed Lens Studio preview interaction checks. The mobile build has also been tested in Snapchat on a Pixel 8: all three marker types, dragging, Undo, and Clear worked. Physical walk-around tracking still needs further testing.
 
-Placement is in free space. Surface snapping, editable notes, saved layouts, shared sessions, and venue reconstruction are not implemented. Markers reset when the Lens restarts. The mobile build allows up to 20 markers.
+Placement is in free space. Surface snapping, editable notes, automatic spatial recovery and venue reconstruction are not implemented. Mobile markers reset when the Lens restarts. The mobile build allows up to 20 markers.
 
 ## Development
 
 Edit runtime scripts under each project's `Assets/Scripts/`. Make scene and project-setting changes through Lens Studio. Local MCP connection files, credentials, editor caches, and workspace state are ignored by Git.
 
 See `THIRD_PARTY_NOTICES.md` for bundled asset notices.
+
+## Shared layout recovery prototype (Specs)
+
+The Specs palette now includes Connect, Invite, Save, and Recover. The implementation uses Connected Lenses and session-scoped Persistent Cloud Storage. It is a prototype; recovery between real accounts has not yet been verified on devices.
+
+1. Connect, then Invite a teammate using the system invitation UI.
+2. Place markers and choose Save. Wait for the shared-save confirmation.
+3. The teammate opens the same session invitation, connects, then chooses Recover.
+4. To return later, reopen that original invitation. Opening the Lens normally can create a different session.
+
+Saved data includes marker types, labels, positions, and rotations in a manual planning frame. Recover recreates that frame at the current camera pose. This recovers a layout **relative to the viewer**, not its original physical location. Automatic site alignment needs a shared spatial anchor. For a manual alignment test, stand at the same starting position and face the same direction.
+
+There is one saved snapshot per session. Save replaces it (last completed write wins); edits are not broadcast live. Recover replaces the local working layout only after its saved data passes validation. A connection/storage error is displayed rather than reported as a successful save. Session access depends on retaining its invitation.
+
+Snap currently documents Connected Lenses for Specs and Camera Kit, not the Snapchat phone app. This feature is therefore only wired in the Specs project. The portable layout format can be reused by a future shared backend.
+
+Validation: Lens Studio TypeScript compilation and isolated storage/serialization tests (`bun test tests/shared-layout.test.ts`). The tests simulate two accounts against a shared store; they do not prove Snap backend or hardware interoperability.

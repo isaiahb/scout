@@ -1,3 +1,5 @@
+import {ScoutSharedSession} from "./ScoutSharedSession";
+import {parseLayout,ScoutLayout} from "./ScoutLayout";
 import {ScoutPaletteUI} from "./ScoutPaletteUI";
 import {buildMarkerMesh} from "./ScoutMarkerMesh";
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable";
@@ -22,6 +24,10 @@ export class ScoutMain extends BaseScriptComponent {
   @input @hint("Maximum markers kept in this sandbox") @widget(new SliderWidget(1,30,1)) maxMarkers:number=20;
   @input @hint("Show collider wireframes for learning and debugging") debugColliders:boolean=false;
   @input @hint("Volume of select and placement cues") @widget(new SliderWidget(0,1,0.05)) sfxVolume:number=0.25;
+  @input connectedLensModule:ConnectedLensModule;
+  @input cloudStorageModule:CloudStorageModule;
+  private shared:ScoutSharedSession;
+  private kinds:number[]=[];
   private selected=0;
   private sequence=0;
   private placed:SceneObject[]=[];
@@ -43,6 +49,16 @@ export class ScoutMain extends BaseScriptComponent {
     this.palette.onSelect.add(kind=>{this.selected=kind;this.lastAction=getTime();this.selectAudio.play(1);this.rebuildPreview();this.refresh()});
     this.palette.onUndo.add(()=>this.undo());
     this.palette.onClear.add(()=>this.clear());
+    // Manual planning frame; automatic physical relocalization is a later layer.
+    this.markers.getTransform().setWorldPosition(this.camera.getTransform().getWorldPosition());
+    this.markers.getTransform().setWorldRotation(this.camera.getTransform().getWorldRotation());
+    if(this.connectedLensModule&&this.cloudStorageModule){
+      this.shared=new ScoutSharedSession(this.connectedLensModule,this.cloudStorageModule,text=>this.palette.setSharedStatus(text));
+      this.palette.onConnect.add(()=>{this.lastAction=getTime();this.shared.connect();});
+      this.palette.onInvite.add(()=>{this.lastAction=getTime();this.shared.invite();});
+      this.palette.onSave.add(()=>{this.lastAction=getTime();this.shared.save(this.snapshot());});
+      this.palette.onRecover.add(()=>{this.lastAction=getTime();this.shared.load(raw=>this.restore(raw));});
+    }
     this.rebuildPreview();this.refresh();this.ready=true;
     console.log("Scout ready: choose Camera, Light, or Notepad; pinch empty space to place.");
   }
@@ -56,6 +72,7 @@ export class ScoutMain extends BaseScriptComponent {
   }
   private update():void {
     if(!this.ready)return;
+    this.shared?.tick();
     const all=InteractionManager.getInstance().getInteractorsByType(InteractorInputType.All);
     all.forEach(interactor=>{
       if(this.interactors.indexOf(interactor)>=0)return;
@@ -98,9 +115,14 @@ export class ScoutMain extends BaseScriptComponent {
     this.lastAction=getTime();
     const kind=this.selected;
     const label=["Camera","Light","Note"][kind]+" "+String(++this.sequence).padStart(2,"0");
-    const root=global.scene.createSceneObject(label);root.setParent(this.markers);
+    const root=this.makeMarker(kind,label);
     root.getTransform().setWorldPosition(position);
     root.getTransform().setWorldRotation(this.camera.getTransform().getWorldRotation());
+    this.placeAudio.play(1);this.refresh();
+    console.log("Scout placed "+label);
+  }
+  private makeMarker(kind:number,label:string):SceneObject {
+    const root=global.scene.createSceneObject(label);root.setParent(this.markers);
     if(kind!==2)buildMarkerMesh(root,kind,this.markerMaterial,false);
     this.palette.decorateMarker(root,label,kind===2);
     const col=root.createComponent("Physics.ColliderComponent") as ColliderComponent;
@@ -110,17 +132,33 @@ export class ScoutMain extends BaseScriptComponent {
     interactable.targetingMode=3;
     const manipulation=root.createComponent(InteractableManipulation.getTypeName()) as InteractableManipulation;
     manipulation.setCanScale(false);
-    this.placed.push(root);this.placeAudio.play(1);this.refresh();
-    console.log("Scout placed "+label+" at "+position.toString());
+    this.placed.push(root);this.kinds.push(kind);return root;
   }
   private undo():void {
-    this.lastAction=getTime();const obj=this.placed.pop();
+    this.lastAction=getTime();const obj=this.placed.pop();this.kinds.pop();
     if(obj&&!isNull(obj))obj.destroy();this.selectAudio.play(1);this.refresh();
     console.log("Scout undo: "+this.placed.length+" markers remain");
   }
   private clear():void {
     this.lastAction=getTime();this.placed.forEach(obj=>{if(!isNull(obj))obj.destroy()});
-    this.placed=[];this.selectAudio.play(1);this.refresh();console.log("Scout cleared");
+    this.placed=[];this.kinds=[];this.selectAudio.play(1);this.refresh();console.log("Scout cleared");
+  }
+  private snapshot():string {
+    const data:ScoutLayout={version:1,frame:'manual',markers:this.placed.map((obj,i)=>{
+      const t=obj.getTransform(),p=t.getLocalPosition(),q=t.getLocalRotation();
+      return {kind:this.kinds[i],label:obj.name,position:[p.x,p.y,p.z],rotation:[q.w,q.x,q.y,q.z]};
+    })};return JSON.stringify(data);
+  }
+  private restore(raw:string):void {
+    const data=parseLayout(raw); // Validate every marker before removing current work.
+    this.clear();
+    this.markers.getTransform().setWorldPosition(this.camera.getTransform().getWorldPosition());
+    this.markers.getTransform().setWorldRotation(this.camera.getTransform().getWorldRotation());
+    for(const m of data.markers){const obj=this.makeMarker(m.kind,m.label),t=obj.getTransform();
+      t.setLocalPosition(new vec3(m.position[0],m.position[1],m.position[2]));
+      t.setLocalRotation(new quat(m.rotation[0],m.rotation[1],m.rotation[2],m.rotation[3]));
+    }
+    this.sequence=Math.max(this.sequence,...data.markers.map(m=>Number(m.label.match(/(\d+)$/)?.[1])||0));this.refresh();
   }
   private refresh():void {this.palette.setState(this.selected,this.placed.length)}
 }
