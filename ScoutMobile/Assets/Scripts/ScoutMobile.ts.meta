@@ -1,0 +1,55 @@
+- !<AssetImportMetadata/1c5f48a1-27fc-49bd-8c1c-e78c26c01727>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 7fc5a68b-c78f-4619-aa5b-f29ab9a9b35f
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 7fc5a68b-c78f-4619-aa5b-f29ab9a9b35f
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> aa759a8c-03d3-4de0-a297-c403e8e43074
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/aa759a8c-03d3-4de0-a297-c403e8e43074>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 1c8eaf8c-56bd-4e19-93fc-44a848e74656
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    camera: false
+    font: false
+    hudTemplate: false
+    markerMaterial: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - camera: !<reference.Camera> 00000000-0000-0000-0000-000000000000
+      markerMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
+      font: !<reference.Font> 00000000-0000-0000-0000-000000000000
+      hudTemplate: !<reference.Text> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input Component.Camera camera
+    - // @input Asset.Material markerMaterial
+    - // @input Asset.Font font
+    - // @input Component.Text hudTemplate
