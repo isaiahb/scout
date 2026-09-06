@@ -29,6 +29,8 @@ export class ScoutTransformGizmo {
       // Keep the collider centered on the shaft without offsetting the axis origin.
       arrow.getTransform().setLocalPosition(axis.uniformScale(69));
       this.bind(arrow,axis,false);
+      // Facing direction uses only world up; retain all three translation arrows.
+      if(i!==1)return;
       const ring=this.object("Rotate "+"XYZ"[i],this.rotate);
       const u=AXES[(i+1)%3],v=axis.cross(u);
       this.mesh(ring,b=>this.torus(b,u,v,COLORS[i]));

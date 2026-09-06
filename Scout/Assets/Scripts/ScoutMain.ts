@@ -158,6 +158,7 @@ export class ScoutMain extends BaseScriptComponent {
     interactable.onTriggerStart.add(()=>{this.editing=root;this.lastAction=getTime();this.refresh();});
     const manipulation=root.createComponent(InteractableManipulation.getTypeName()) as InteractableManipulation;
     manipulation.setCanScale(false);
+    manipulation.setCanRotate(false);
     this.placed.push(root);this.kinds.push(kind);this.editing=root;return root;
   }
   private undo():void {
