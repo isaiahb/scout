@@ -13,7 +13,7 @@ metaInfo:
     []
   tags:
     []
-  lensName: Untitled
+  lensName: ShotScout
   lensDescriptors:
     - AI_MUTATED
   lensApplicableContext:
@@ -26,7 +26,7 @@ metaInfo:
   lensClientCompatibilities:
     - Spectacles
   platformBundlesEnabled: false
-  iconHash: ""
+  iconHash: 62c68dfc1be3603d76ad751ca3b125be
   videoPreviewHash: ""
   fromTemplateName: Default
   fromTemplateUrl: Lens Studio 5.23.2.26081320
@@ -46,8 +46,8 @@ metaInfo:
     build: 0
   documentId: 9bd41deb-da98-4bc7-832c-8c79ad23dfa1
   originalDocumentId: f3d524c5-ac07-44a7-b03a-e07d591396ec
-  packageId: ""
-  packageVersion: ""
+  packageId: com.shotscout.lens
+  packageVersion: 1.0.0
   spkPrivilegeLevel: Generic
   gluboEnabled: false
 targetPlatform: Spectacles
