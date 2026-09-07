@@ -92,6 +92,7 @@ export class ScoutNoteWizard {
     // too, not just once at construction like the static Camera/Light panels.
     this.scheduleDelay(0.1,()=>{
       const visit=(node:SceneObject)=>{
+        if(isNull(node))return; // Clear/recover may destroy the note before this delayed sweep.
         if(node.getComponent(Interactable.getTypeName()))return;
         node.getComponents("Physics.ColliderComponent").forEach(c=>c.enabled=false);
         for(let i=0;i<node.getChildrenCount();i++)visit(node.getChild(i));
