@@ -41,6 +41,9 @@ const GROUND_INDICATOR_COLOR=new vec4(0.72,0.58,1,1);
 const GROUND_INDICATOR_FOOTPRINTS=[80,80,26,65,65]; // Camera, Light, Note, Standing, Seated — matches marker collider footprints
 const GROUND_INDICATOR_LIFT=0.5; // avoid z-fighting with the real floor mesh
 const GROUND_PULSE_SPEED=2.4,GROUND_PULSE_DEPTH=0.18;
+// A sixth, non-placeable "tool": lets someone done placing things freely tap/drag existing markers
+// without an empty-space pinch accidentally dropping a new one.
+const HAND_KIND=5;
 
 const MODEL_HEIGHTS=[145,165,30,170,125];
 // Key light rig: local offset from the model's pivot to the softbox opening, in the model's own raw
@@ -161,6 +164,7 @@ export class ScoutMain extends BaseScriptComponent {
   }
   private rebuildPreview():void {
     if(this.previewShape&&!isNull(this.previewShape))this.previewShape.destroy();
+    if(this.selected===HAND_KIND){this.previewShape=null;return}
     const prefab=this.prefabFor(this.selected);
     if(prefab){
       this.previewShape=prefab.instantiate(this.placementPreview);
@@ -193,7 +197,7 @@ export class ScoutMain extends BaseScriptComponent {
       if(this.interactors.indexOf(interactor)>=0)return;
       this.interactors.push(interactor);
       interactor.onTriggerStart.add(target=>{
-        if(interactor.inputType===InteractorInputType.Mouse && !target && getTime()-this.lastAction>0.25) this.placeAt(this.positionFor(interactor));
+        if(interactor.inputType===InteractorInputType.Mouse && !target && this.selected!==HAND_KIND && getTime()-this.lastAction>0.25) this.placeAt(this.positionFor(interactor));
       });
     });
     // Hand pinch remains available in empty space even when SIK has no direct target.
@@ -201,7 +205,7 @@ export class ScoutMain extends BaseScriptComponent {
       const hand=HandInputData.getInstance().getHand(side);
       const down=hand.isPinching();
       const interactor=all.find(i=>i.inputType===(index===0?InteractorInputType.LeftHand:InteractorInputType.RightHand));
-      if(down&&!this.pinched[index]&&!interactor?.currentInteractable&&getTime()-this.lastAction>0.25){
+      if(down&&!this.pinched[index]&&!interactor?.currentInteractable&&this.selected!==HAND_KIND&&getTime()-this.lastAction>0.25){
         this.placeAt(this.positionFor(interactor));
       }
       this.pinched[index]=down;
@@ -210,7 +214,7 @@ export class ScoutMain extends BaseScriptComponent {
     // A lingering target on the palette itself (e.g. right after tapping a toolbar icon) shouldn't
     // suppress the placement guides — only a real scene object (a placed marker, a gizmo handle) should.
     const blocking=active?.currentInteractable&&!this.isPaletteTarget(active.currentInteractable);
-    const canPlace=!blocking&&this.placed.length<this.maxMarkers;
+    const canPlace=!blocking&&this.placed.length<this.maxMarkers&&this.selected!==HAND_KIND;
     this.placementPreview.enabled=canPlace;
     const aim=this.positionFor(active);
     this.groundHitTest(aim,result=>{if(result)this.previewGroundY=result.position.y;});
@@ -319,7 +323,12 @@ export class ScoutMain extends BaseScriptComponent {
     if(!bulb)return;
     const forward=bulb.getTransform().forward;
     const tilted=forward.uniformScale(Math.cos(KEY_LIGHT_TILT_DOWN)).sub(vec3.up().uniformScale(Math.sin(KEY_LIGHT_TILT_DOWN))).normalize();
-    bulb.getTransform().setWorldRotation(quat.lookAt(tilted,vec3.up()));
+    // quat.lookAt(X,up) orients the bulb so its own transform.forward (+Z) equals X — but a
+    // Directional LightSource, like a Camera (see AGENTS.md's "identity rotation faces −Z" note),
+    // actually emits along its local −Z, the opposite of that transform.forward axis. Feeding the
+    // NEGATED target here compensates, so the real beam ends up pointing at `tilted` instead of away
+    // from it — this was shining the softbox out its back panel instead of through the diffuser.
+    bulb.getTransform().setWorldRotation(quat.lookAt(tilted.uniformScale(-1),vec3.up()));
   }
   private prefabFor(kind:number):ObjectPrefab {return [this.cameraPrefab,this.lightPrefab,null,this.standingPrefab,this.seatedPrefab][kind];}
   private makeMarker(kind:number,label:string,groundY:number):SceneObject {

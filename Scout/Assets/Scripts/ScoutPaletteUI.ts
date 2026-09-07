@@ -11,6 +11,7 @@ import {CameraAssetState, LightAssetState, NoteAssetState, ISO_STOPS, APERTURE_S
 
 const ICONS: Texture[] = [requireAsset("../Icons/videocam.png") as Texture, requireAsset("../Icons/lightbulb.png") as Texture, requireAsset("../Icons/sticky_note_2.png") as Texture, requireAsset("../Icons/undo.png") as Texture, requireAsset("../Icons/delete.png") as Texture];
 const ACTOR_ICONS:Texture[]=[requireAsset("../Icons/person.png") as Texture,requireAsset("../Icons/chair.png") as Texture];
+const HAND_ICON=requireAsset("../Icons/pan_tool.png") as Texture;
 const ARROW_ICON=requireAsset("../Icons/keyboard_arrow_down.png") as Texture;
 const EDIT_ICON=requireAsset("../Icons/edit.png") as Texture;
 const CLOSE_ICON=requireAsset("../Icons/close.png") as Texture;
@@ -43,9 +44,12 @@ const NOTE_HOVER_TINT=new vec4(0.72,0.68,0.82,1);
 const NOTE_ACTIVE_TINT=new vec4(0.50,0.42,0.78,1);
 const PANEL_RADIUS=2.6,BUTTON_RADIUS=1.4;
 const CAP_WIDTH=6,CAP_HEIGHT=14;
-const TOOLBAR_ICON=6,TOOLBAR_GAP=1.2,TOOLBAR_COUNT=4;
+const TOOLBAR_ICON=6,TOOLBAR_GAP=1.2,TOOLBAR_COUNT=5;
 const COLLAPSED_SIZE=new vec2(TOOLBAR_ICON+3,TOOLBAR_COUNT*TOOLBAR_ICON+(TOOLBAR_COUNT-1)*TOOLBAR_GAP+3);
-const TOOL_NAMES=["Camera","Light","Notepad","Standing","Seated"];
+const TOOL_NAMES=["Camera","Light","Notepad","Standing","Seated","Hand"];
+// A sixth, non-placeable "tool" — lets someone done placing things freely tap/drag existing markers
+// without an empty-space pinch accidentally dropping a new one. Kept in sync with ScoutMain's own copy.
+const HAND_KIND=5;
 const THEME_FONT=requireAsset("../Fonts/Inter.ttf") as Font;
 const TYPE_SCALE = {Title2:{size:93,weight:700},Body:{size:52,weight:600},Caption:{size:44,weight:500}};
 /** WB/Kelvin dials fill their ring's hole with the color that Kelvin value represents. */
@@ -102,7 +106,7 @@ export class ScoutPaletteUI extends BaseScriptComponent {
     const back = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate;
     this.back=back;
     back.style="simple";
-    const height=(this.showSharedControls?44:36)+LOGO_HEIGHT;
+    const height=(this.showSharedControls?50:42)+LOGO_HEIGHT;
     this.expandedSize=new vec2(46,height);
     back.size = this.expandedSize;
     back.onInitialized.add(()=>{this.style(back,PANEL_TINT,PANEL_RADIUS);});
@@ -122,6 +126,11 @@ export class ScoutPaletteUI extends BaseScriptComponent {
     ["Standing","Seated"].forEach((label,i)=>{
       this.selectionLabels.push(this.button(actorRow,label,20.5,5,ACTOR_ICONS[i],()=>this.onSelect.invoke(i+3)));
     });
+    // Hand mode: no asset to place, just lets existing markers be tapped/dragged without accidentally
+    // dropping a new one. Pushed to selectionLabels last so its array position still matches HAND_KIND.
+    const mode=this.child(col,"Mode",42,5);
+    const modeRow=this.flex(mode,FlexDirection.Row,42,5,1,0);
+    this.selectionLabels.push(this.button(modeRow,"Hand",42,5,HAND_ICON,()=>this.onSelect.invoke(HAND_KIND)));
     const actions = this.child(col,"Actions",42,4.5);
     const actionRow = this.flex(actions,FlexDirection.Row,42,4.5,1,0);
     this.button(actionRow,"Undo Last",20.5,4.5,ICONS[3],()=>this.onUndo.invoke());
@@ -161,7 +170,8 @@ export class ScoutPaletteUI extends BaseScriptComponent {
       [ICONS[0],()=>this.onSelect.invoke(0)],
       [ICONS[1],()=>this.onSelect.invoke(1)],
       [ICONS[2],()=>this.onSelect.invoke(2)],
-      [ACTOR_ICONS[0],()=>{this.subjectPose=this.subjectPose===3?4:3;this.onSelect.invoke(this.subjectPose);}]
+      [ACTOR_ICONS[0],()=>{this.subjectPose=this.subjectPose===3?4:3;this.onSelect.invoke(this.subjectPose);}],
+      [HAND_ICON,()=>this.onSelect.invoke(HAND_KIND)],
     ];
     const totalH=TOOLBAR_COUNT*TOOLBAR_ICON+(TOOLBAR_COUNT-1)*TOOLBAR_GAP;
     tools.forEach(([icon,action],i)=>{
