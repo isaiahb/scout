@@ -2,6 +2,15 @@
 
 A spatial pre-production prototype for filmmakers: select a camera, light, note, standing actor, or seated actor, place it in space, and move it while planning a scene.
 
+## Team and contributors
+
+ShotScout was created for the CLAD Summer Hackathon by:
+
+- **[Simon Leon](https://github.com/simonleonmartinez)** — co-creator and contributor, including the equipment controls, note interface, visual polish, and submission video.
+- **[Isaiah Ballah](https://github.com/isaiahb)** — co-creator and contributor, including the initial prototype, interaction tools, shared-layout recovery, and integration testing.
+
+Built collaboratively with CLAD and AI-assisted development in Lens Studio.
+
 ## Tonight’s Specs demo
 
 The primary demo is `Scout/Scout.esproj` in Lens Studio’s Specs interactive preview: place equipment and actors, grab to move, adjust facing with the rotation ring, then record a walkthrough from multiple viewpoints. Share the recording as a visual setup brief.
