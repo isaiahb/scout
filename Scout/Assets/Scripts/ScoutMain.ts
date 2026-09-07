@@ -2,7 +2,7 @@ import {ScoutTransformGizmo} from "./ScoutTransformGizmo";
 import {ScoutSharedSession} from "./ScoutSharedSession";
 import {parseLayout,ScoutLayout} from "./ScoutLayout";
 import {ScoutPaletteUI} from "./ScoutPaletteUI";
-import {buildMarkerMesh} from "./ScoutMarkerMesh";
+import {buildMarkerMesh, NOTE_PIN_HEIGHT} from "./ScoutMarkerMesh";
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable";
 import {InteractableManipulation} from "SpectaclesInteractionKit.lspkg/Components/Interaction/InteractableManipulation/InteractableManipulation";
 import {InteractionManager} from "SpectaclesInteractionKit.lspkg/Core/InteractionManager/InteractionManager";
@@ -10,7 +10,7 @@ import {Interactor,InteractorInputType} from "SpectaclesInteractionKit.lspkg/Cor
 
 import {HandInputData} from "SpectaclesInteractionKit.lspkg/Providers/HandInputData/HandInputData";
 import {IMAGE_MATERIAL_ASSET} from "SpectaclesUIKit.lspkg/Scripts/Utility/Assets";
-import {CameraAssetState, LightAssetState, defaultCameraState, defaultLightState, KELVIN_STOPS, INTENSITY_STOPS, kelvinToRGB} from "./ScoutAssetState";
+import {CameraAssetState, LightAssetState, NoteAssetState, defaultCameraState, defaultLightState, defaultNoteState, KELVIN_STOPS, INTENSITY_STOPS, kelvinToRGB} from "./ScoutAssetState";
 
 /** The exact runtime hooks one placed Light asset needs so its dials can affect something real. */
 type LightMarkerRef={light:LightSource;glowVisual:RenderMeshVisual};
@@ -105,6 +105,7 @@ export class ScoutMain extends BaseScriptComponent {
   private cameraStates:(CameraAssetState|null)[]=[];
   private lightStates:(LightAssetState|null)[]=[];
   private lightRefs:(LightMarkerRef|null)[]=[];
+  private noteStates:(NoteAssetState|null)[]=[];
   private selected=0;
   private editing:SceneObject=null;
   private gizmo:ScoutTransformGizmo;
@@ -165,6 +166,10 @@ export class ScoutMain extends BaseScriptComponent {
       this.previewShape=prefab.instantiate(this.placementPreview);
       // A small cursor model indicates the selected tool without hiding the venue.
       this.previewShape.getTransform().setLocalPosition(new vec3(0,-15,0));
+    }else if(this.selected===2){
+      // The Note's pin+notepad is too tall/wide to usefully preview while just aiming — the pulsing
+      // ground indicator (built once, shared by every asset type) is enough to show where it'll land.
+      this.previewShape=null;
     }else this.previewShape=buildMarkerMesh(this.placementPreview,this.selected,this.markerMaterial,true);
   }
   /** Flat glowing grid decal on the real floor, showing where the selected asset will land. */
@@ -296,7 +301,12 @@ export class ScoutMain extends BaseScriptComponent {
     const root=this.makeMarker(kind,label,position.y);
     root.getTransform().setWorldPosition(position);
     const f=this.camera.getTransform().forward;
-    root.getTransform().setWorldRotation(quat.angleAxis(Math.atan2(f.x,f.z),vec3.up()));
+    // The Camera prop's real lens/back axis is its local X, not Z (confirmed by standing at each of
+    // root's +-X/+-Z directions and matching against the model's own LCD screen) — everywhere else in
+    // this idiom assumes Z, so without this extra quarter turn the whole rig (and its faceBack-mounted
+    // dial/label card) ends up facing 90° off, sideways to whoever just placed it.
+    const cameraCorrection=kind===0?Math.PI/2:0;
+    root.getTransform().setWorldRotation(quat.angleAxis(Math.atan2(f.x,f.z)+cameraCorrection,vec3.up()));
     if(kind===1)this.tiltKeyLight(root);
     this.placeAudio.play(1);this.refresh();
     console.log("Scout placed "+label);
@@ -317,6 +327,7 @@ export class ScoutMain extends BaseScriptComponent {
     const prefab=this.prefabFor(kind),height=MODEL_HEIGHTS[kind];
     const cameraState=kind===0?defaultCameraState():null;
     const lightState=kind===1?defaultLightState():null;
+    const noteState=kind===2?defaultNoteState():null;
     let lightRef:LightMarkerRef|null=null;
     if(prefab){
       const model=prefab.instantiate(root),t=model.getTransform();
@@ -329,9 +340,15 @@ export class ScoutMain extends BaseScriptComponent {
         const visual=findMeshVisual(model);
         if(visual)visual.meshShadowMode=MeshShadowMode.Both;
       }
-    }else if(kind!==2)buildMarkerMesh(root,kind,this.markerMaterial,false);
-    const labelY=kind===2?0:height/2+8;
-    this.palette.decorateMarker(root,label,kind===2,labelY,()=>this.editMarker(root),()=>this.deleteMarker(root));
+    }else buildMarkerMesh(root,kind,this.markerMaterial,false);
+    // Note's pin rises from the floor to eye level, so its interactive content anchors near the top of
+    // the pin rather than just above a ground-level card, like every other asset's label/dial row does.
+    const labelY=kind===2?NOTE_PIN_HEIGHT:height/2+8;
+    if(noteState){
+      this.palette.buildNoteWizard(root,label,labelY,noteState,patch=>Object.assign(noteState,patch),()=>this.editMarker(root),()=>this.deleteMarker(root));
+    }else{
+      this.palette.decorateMarker(root,label,labelY,()=>this.editMarker(root),()=>this.deleteMarker(root),kind===0?1:kind===1?2:0);
+    }
     // Two separate systems by design: Camera dials are informational only (no real-world effect is
     // requested for them); Light dials drive the marker's own LightSource/glow directly by closing
     // over `lightRef` — never an array index, so a later deletion of some other marker can't leave
@@ -345,7 +362,7 @@ export class ScoutMain extends BaseScriptComponent {
       });
     }
     const col=root.createComponent("Physics.ColliderComponent") as ColliderComponent;
-    const shape=Shape.createBoxShape();shape.size=kind===2?new vec3(18,11,10):new vec3(kind>=3?55:70,height,kind>=3?55:70);
+    const shape=Shape.createBoxShape();shape.size=kind===2?new vec3(14,NOTE_PIN_HEIGHT,14):new vec3(kind>=3?55:70,height,kind>=3?55:70);
     col.shape=shape;col.debugDrawEnabled=this.debugColliders;
     const interactable=root.createComponent(Interactable.getTypeName()) as Interactable;
     interactable.targetingMode=3;
@@ -355,6 +372,7 @@ export class ScoutMain extends BaseScriptComponent {
     manipulation.setCanRotate(false);
     this.placed.push(root);this.kinds.push(kind);this.groundY.push(groundY);
     this.cameraStates.push(cameraState);this.lightStates.push(lightState);this.lightRefs.push(lightRef);
+    this.noteStates.push(noteState);
     return root;
   }
   /** Real-time light on the Light prop so it actually illuminates the scene and casts a shadow, aimed
@@ -443,19 +461,20 @@ export class ScoutMain extends BaseScriptComponent {
     if(idx<0)return;
     this.placed.splice(idx,1);this.kinds.splice(idx,1);this.groundY.splice(idx,1);
     this.cameraStates.splice(idx,1);this.lightStates.splice(idx,1);this.lightRefs.splice(idx,1);
+    this.noteStates.splice(idx,1);
     if(!isNull(root))root.destroy();
     this.selectAudio.play(1);this.refresh();
   }
   private undo():void {
     this.lastAction=getTime();const obj=this.placed.pop();this.kinds.pop();this.groundY.pop();
-    this.cameraStates.pop();this.lightStates.pop();this.lightRefs.pop();
+    this.cameraStates.pop();this.lightStates.pop();this.lightRefs.pop();this.noteStates.pop();
     if(obj&&!isNull(obj))obj.destroy();this.selectAudio.play(1);this.refresh();
     console.log("Scout undo: "+this.placed.length+" markers remain");
   }
   private clear():void {
     this.lastAction=getTime();this.placed.forEach(obj=>{if(!isNull(obj))obj.destroy()});
     this.placed=[];this.kinds=[];this.groundY=[];
-    this.cameraStates=[];this.lightStates=[];this.lightRefs=[];
+    this.cameraStates=[];this.lightStates=[];this.lightRefs=[];this.noteStates=[];
     this.selectAudio.play(1);this.refresh();console.log("Scout cleared");
   }
   private snapshot():string {

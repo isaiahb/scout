@@ -1,6 +1,39 @@
 // Geometry helpers adapted from Snap CLAD. Copyright 2026 Specs Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+/** Height from the floor to the notepad's mount point, shared with ScoutMain so its collider and
+ * wizard-panel anchor line up with the geometry built here. Chosen so the whole pin+notepad assembly
+ * tops out at about the Camera prop's own height (100 + notepad's own half-height ~45 ≈ 145). */
+export const NOTE_PIN_HEIGHT=100;
+
+/** A waypoint pin shaped like a real map pin: a sharp point planted at the floor that flares wider as
+ * it rises toward the notepad at eye level, rather than a uniform-width rod. Built as a single FLAT
+ * triangle (not a lathed 3D volume) so it reads as one continuous 2D shape with the notepad card sitting
+ * on top of it, instead of a rounded 3D pole awkwardly meeting a flat panel. Lavender-grey only, to
+ * match the notepad's own palette (no blue/cyan anywhere in this asset). */
+export function buildWaypointPin(root:SceneObject, material:Material, height:number):SceneObject {
+  const grey:[number,number,number,number]=[0.58,0.55,0.64,1];
+  const pin=global.scene.createSceneObject("Pin");pin.setParent(root);
+  const pb=new MeshBuilder([{name:"position",components:3},{name:"normal",components:3,normalized:true},{name:"color",components:4}]);
+  pb.topology=MeshTopology.Triangles;pb.indexType=MeshIndexType.UInt16;
+  const halfW=7,topY=height*0.97;
+  // Double-sided (both winding orders) so the flat triangle reads correctly from either side, not just
+  // one — the same lesson learned earlier with the rotary dial's fill circle.
+  const tris:[number,number,number][][]=[
+    [[0,0,0],[-halfW,topY,0],[halfW,topY,0]],
+    [[0,0,0],[halfW,topY,0],[-halfW,topY,0]],
+  ];
+  let vi=0;const ix:number[]=[];
+  tris.forEach(tri=>{
+    tri.forEach(p=>pb.appendVerticesInterleaved([p[0],p[1],p[2],0,0,1,...grey]));
+    ix.push(vi,vi+1,vi+2);vi+=3;
+  });
+  pb.appendIndices(ix);
+  const pv=pin.createComponent("Component.RenderMeshVisual") as RenderMeshVisual;
+  pv.mesh=pb.getMesh();pv.mainMaterial=material.clone();pb.updateMesh();
+  return root;
+}
+
 /** Parametric, centimeter-authored marker geometry. The collider root stays unit scale. */
 export function buildMarkerMesh(parent:SceneObject, kind:number, material:Material, preview:boolean):SceneObject {
   const root=global.scene.createSceneObject(preview?"Placement shape":"Marker shape");root.setParent(parent);
@@ -24,7 +57,7 @@ export function buildMarkerMesh(parent:SceneObject, kind:number, material:Materi
     mesh("Light base",b=>{buildLathe(b,[[0,-4],[1,-4],[1.1,-2],[0,-2]],24,dark)});
     mesh("Light rays",b=>{const ix:number[]=[];let v=0;v=addBox(b,ix,-4.3,1,0,0.65,0.22,0.22,warm,v);v=addBox(b,ix,4.3,1,0,0.65,0.22,0.22,warm,v);v=addBox(b,ix,0,6,0,0.22,0.65,0.22,warm,v);b.appendIndices(ix)});
   }else{
-    mesh("Note preview",b=>{const ix:number[]=[];let v=0;v=addBox(b,ix,0,0,0,6,4,0.3,warm,v);for(let y=-2;y<=2;y+=2)v=addBox(b,ix,0,y,0.4,4,0.15,0.1,dark,v);b.appendIndices(ix)});
+    buildWaypointPin(root,material,NOTE_PIN_HEIGHT);
   }
   return root;
 }

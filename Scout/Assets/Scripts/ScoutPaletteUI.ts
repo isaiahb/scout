@@ -6,7 +6,8 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes";
 import {IMAGE_MATERIAL_ASSET} from "SpectaclesUIKit.lspkg/Scripts/Utility/Assets";
 import {ScoutRotaryDial, RotaryDialTheme, DialStep} from "./ScoutRotaryDial";
-import {CameraAssetState, LightAssetState, ISO_STOPS, APERTURE_STOPS, SHUTTER_STOPS, KELVIN_STOPS, INTENSITY_STOPS, kelvinToRGB} from "./ScoutAssetState";
+import {ScoutNoteWizard, NoteWizardTheme} from "./ScoutNoteWizard";
+import {CameraAssetState, LightAssetState, NoteAssetState, ISO_STOPS, APERTURE_STOPS, SHUTTER_STOPS, KELVIN_STOPS, INTENSITY_STOPS, kelvinToRGB} from "./ScoutAssetState";
 
 const ICONS: Texture[] = [requireAsset("../Icons/videocam.png") as Texture, requireAsset("../Icons/lightbulb.png") as Texture, requireAsset("../Icons/sticky_note_2.png") as Texture, requireAsset("../Icons/undo.png") as Texture, requireAsset("../Icons/delete.png") as Texture];
 const ACTOR_ICONS:Texture[]=[requireAsset("../Icons/person.png") as Texture,requireAsset("../Icons/chair.png") as Texture];
@@ -19,17 +20,27 @@ const DELETE_ICON_TINT=new vec4(1,1,1,1);
 const LOGO=requireAsset("../Logo/shotscout_wordmark.png") as Texture;
 const MASCOT=requireAsset("../Logo/shotscout_mascot.png") as Texture;
 const MASCOT_ASPECT=550/720;
-const LOGO_HEIGHT=8,LOGO_WIDTH=16.9;
+const LOGO_HEIGHT=12,LOGO_WIDTH=25.4;
 const PANEL_TINT=new vec4(0x3e/255,0x30/255,0x82/255,1);
 const BUTTON_TINT=new vec4(0x24/255,0x17/255,0x4d/255,1);
 const TEXT_TINT=new vec4(0xc1/255,0xad/255,0xff/255,1);
 // Rotary dial rings read as gear, not menu — neutral gunmetal grey matching the camera/light housings,
 // not the palette's purple/cyan theme.
-const DIAL_IDLE_TINT=new vec4(0.24,0.24,0.26,1);
-const DIAL_HOVER_TINT=new vec4(0.38,0.38,0.41,1);
-const DIAL_ACTIVE_TINT=new vec4(0.55,0.55,0.58,1);
-const DIAL_TICK_TINT=new vec4(0.5,0.5,0.52,1);
-const DIAL_PANEL_TINT=new vec4(0.12,0.12,0.13,1);
+// Idle brightened well above the panel (0.12) for a clear ring-vs-background boundary at a glance;
+// hover/active step up from there so drag feedback still reads as a distinct state.
+const DIAL_IDLE_TINT=new vec4(0.42,0.42,0.46,1);
+const DIAL_HOVER_TINT=new vec4(0.56,0.56,0.61,1);
+const DIAL_ACTIVE_TINT=new vec4(0.72,0.72,0.76,1);
+const DIAL_TICK_TINT=new vec4(0.66,0.66,0.7,1);
+const DIAL_PANEL_TINT=new vec4(0.1,0.1,0.11,1);
+// The Note asset reads as an actual paper notepad, not equipment or menu chrome — a light lavender-grey
+// page with dark text, kept strictly to the lavender/grey family (no blue or cyan anywhere in it).
+const NOTE_PAPER_TINT=new vec4(0.87,0.85,0.91,1);
+const NOTE_TEXT_TINT=new vec4(0.22,0.20,0.28,1);
+const NOTE_ACCENT_TINT=new vec4(0.42,0.32,0.82,1);
+const NOTE_IDLE_TINT=new vec4(0.64,0.60,0.74,1);
+const NOTE_HOVER_TINT=new vec4(0.72,0.68,0.82,1);
+const NOTE_ACTIVE_TINT=new vec4(0.50,0.42,0.78,1);
 const PANEL_RADIUS=2.6,BUTTON_RADIUS=1.4;
 const CAP_WIDTH=6,CAP_HEIGHT=14;
 const TOOLBAR_ICON=6,TOOLBAR_GAP=1.2,TOOLBAR_COUNT=4;
@@ -52,7 +63,6 @@ function applyTextRole(t: Text, role: keyof typeof TYPE_SCALE): void {
 /** Passive UIKit views for the palette and the labels attached to placed markers. */
 @component
 export class ScoutPaletteUI extends BaseScriptComponent {
-  @input @hint("Placeholder shown on placed notepads") noteText: string = "Check this angle";
   @input @hint("Bright accent for the current selection") @widget(new ColorWidget()) accent: vec4 = new vec4(0.45,0.9,0.95,1);
   @input @hint("Show experimental shared-session controls") showSharedControls:boolean=false;
   onSelect = new Event<number>();
@@ -195,16 +205,33 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   setSharedStatus(text:string):void {if(this.sharedStatus)this.sharedStatus.text=text;}
   setHint(hint:string):void { if(this.status) this.status.text=hint; }
 
-  /** Labels are views only; caller owns position, lifetime, and interaction state. */
-  decorateMarker(root:SceneObject,label:string,note:boolean,labelY=-7,onEdit:()=>void=()=>{},onDelete:()=>void=()=>{}): void {
-    const host=this.obj(root,note?"Notepad card":"Marker label",new vec3(0,note?0:labelY,4));
+  /** Labels are views only; caller owns position, lifetime, and interaction state. `backAxis` mounts
+   * the card on the asset's real operator-facing side instead of the default (+Z, facing whoever placed
+   * it): 1 for the Camera (its true back sits on local -X — confirmed by standing at each of root's
+   * +-X/+-Z directions and matching against the model's own LCD screen), 2 for the Light (its true back
+   * is local -Z, opposite the beam — the bulb aims out +Z, per buildKeyLight's own comment). */
+  decorateMarker(root:SceneObject,label:string,labelY=-7,onEdit:()=>void=()=>{},onDelete:()=>void=()=>{},backAxis:0|1|2=0): void {
+    // rotationFromTo instead of an angleAxis guess — sidesteps sign-convention mistakes entirely by
+    // directly rotating the card's default +Z-facing normal onto the asset's real back axis.
+    const pos=backAxis===1?new vec3(-4,labelY,0):backAxis===2?new vec3(0,labelY,-4):new vec3(0,labelY,4);
+    // backAxis 2 is a straight 180 — rotationFromTo is singular for exactly-antiparallel vectors (its
+    // cross product is zero), so that case uses a plain angleAxis flip instead.
+    const rot=backAxis===1?quat.rotationFromTo(vec3.forward(),vec3.right().uniformScale(-1))
+      :backAxis===2?quat.angleAxis(Math.PI,vec3.up())
+      :null;
+    const host=this.obj(root,"Marker label",pos);
+    if(rot)host.getTransform().setLocalRotation(rot);
     host.createComponent("Component.Canvas");
     const back=host.createComponent(BackPlate.getTypeName()) as BackPlate;
-    const size=new vec2(note?18:16,note?11:3.2);
+    const size=new vec2(16,3.2);
     back.size=size;
     const editX=size.x/2-3.2;
-    this.cornerButton(host,"Delete",new vec3(editX-7.4,size.y/2,1.2),CLOSE_ICON,DELETE_SPHERE_TINT,DELETE_ICON_TINT,onDelete);
-    this.cornerButton(host,"Edit",new vec3(editX,size.y/2,1.2),EDIT_ICON,SPHERE_TINT,TEXT_TINT,onEdit);
+    // Badges sit above the card's top edge (sphere radius 2.8 + a small gap) instead of straddling it —
+    // centered at the edge itself, their lower half dipped into the label text and covered it (visible
+    // from the front, where the card is read straight-on).
+    const badgeY=size.y/2+3.3;
+    this.cornerButton(host,"Delete",new vec3(editX-7.4,badgeY,1.2),CLOSE_ICON,DELETE_SPHERE_TINT,DELETE_ICON_TINT,onDelete);
+    this.cornerButton(host,"Edit",new vec3(editX,badgeY,1.2),EDIT_ICON,SPHERE_TINT,TEXT_TINT,onEdit);
     back.onInitialized.add(()=>{
       back.interactable.enabled=false;
       back.interactionPlane.enabled=false;
@@ -219,18 +246,28 @@ export class ScoutPaletteUI extends BaseScriptComponent {
       });disable.reset(0.1);
     });
     const content=this.obj(host,"LabelContent",new vec3(0,0,0.6));
-    const col=this.flex(content,FlexDirection.Column,note?18:16,note?11:3.2,0.7,0.7);
-    const t=this.textRow(col,label,note?16.6:14.6,1.8,"Body");
+    const col=this.flex(content,FlexDirection.Column,16,3.2,0.7,0.7);
+    const t=this.textRow(col,label,14.6,1.8,"Body");
     t.textFill.color=this.accent;
-    if(note){
-      this.textRow(col,this.noteText,16.6,3.5,"Body");
-      this.textRow(col,"Pinch + drag to move",16.6,1.8,"Caption");
-    }
+  }
+  /** The Note asset's entire interface — a step-by-step wizard (shot #, shot type, movement) mounted
+   * the same way the Camera/Light control panels are: on the operator-facing side (backAxis-2 style,
+   * baked into ScoutNoteWizard itself), anchored near the top of the waypoint pin so it's readable at
+   * eye level the instant the pin is placed. `scheduleDelay` hands the wizard this component's own
+   * createEvent access, since ScoutNoteWizard is a plain class, not a component. */
+  buildNoteWizard(root:SceneObject,label:string,labelY:number,state:NoteAssetState,onChange:(patch:Partial<NoteAssetState>)=>void,onEdit:()=>void,onDelete:()=>void):void {
+    if(!this.badgeMaterial)return;
+    const theme:NoteWizardTheme={font:THEME_FONT,textColor:NOTE_TEXT_TINT,accent:NOTE_ACCENT_TINT,idleColor:NOTE_IDLE_TINT,hoverColor:NOTE_HOVER_TINT,activeColor:NOTE_ACTIVE_TINT,panelColor:NOTE_PAPER_TINT};
+    new ScoutNoteWizard(root,new vec3(0,labelY,0),this.badgeMaterial,theme,label,state,onChange,onEdit,onDelete,(seconds,fn)=>{
+      const ev=this.createEvent("DelayedCallbackEvent");ev.bind(fn);ev.reset(seconds);
+    });
   }
   /** Compact ISO/Aperture/Shutter/WB dial row for one placed Camera asset — purely informational, no
    * dial here drives a real effect (see AGENTS request: only the Light asset's dials do). */
   buildCameraControls(root:SceneObject,labelY:number,state:CameraAssetState,onChange:(patch:Partial<CameraAssetState>)=>void):void {
-    this.buildControlsRow(root,labelY,38,[
+    // backAxis 1: mounted like a camcorder's rear screen, facing the operator standing behind the
+    // camera (its true back is local -X), not the side that happened to face whoever placed it.
+    this.buildControlsRow(root,labelY,58,1,[
       {label:"ISO",steps:ISO_STOPS,initialIndex:state.isoIndex,onChange:i=>onChange({isoIndex:i})},
       {label:"Aperture",steps:APERTURE_STOPS,initialIndex:state.apertureIndex,onChange:i=>onChange({apertureIndex:i})},
       {label:"Shutter",steps:SHUTTER_STOPS,initialIndex:state.shutterIndex,onChange:i=>onChange({shutterIndex:i})},
@@ -240,7 +277,9 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   /** Compact Intensity/Kelvin dial row for one placed Light asset — both dials drive the marker's
    * real-time LightSource via ScoutMain.applyLightLook. */
   buildLightControls(root:SceneObject,labelY:number,state:LightAssetState,onChange:(patch:Partial<LightAssetState>)=>void):void {
-    this.buildControlsRow(root,labelY,20,[
+    // backAxis 2: the bulb aims its beam out of local +Z (see ScoutMain.buildKeyLight), so the true
+    // operator-facing back is -Z — otherwise the dials sit in the beam, facing the lit subject instead.
+    this.buildControlsRow(root,labelY,30,2,[
       {label:"Intensity",steps:INTENSITY_STOPS,initialIndex:state.intensityIndex,onChange:i=>onChange({intensityIndex:i})},
       {label:"Kelvin",steps:KELVIN_STOPS,initialIndex:state.kelvinIndex,onChange:i=>onChange({kelvinIndex:i}),fillColorForValue:kelvinFill},
     ]);
@@ -248,14 +287,20 @@ export class ScoutPaletteUI extends BaseScriptComponent {
   /** Shared visual plumbing behind buildCameraControls/buildLightControls — a small BackPlate panel,
    * floating above the marker's existing label card (never replacing it), hosting a row of RotaryDials.
    * Camera and Light keep their own public methods/types above; only this rendering helper is shared. */
-  private buildControlsRow(root:SceneObject,labelY:number,rowWidth:number,dials:{label:string;steps:DialStep[];initialIndex:number;onChange:(index:number)=>void;fillColorForValue?:(value:number)=>vec4}[]):void {
+  private buildControlsRow(root:SceneObject,labelY:number,rowWidth:number,backAxis:0|1|2,dials:{label:string;steps:DialStep[];initialIndex:number;onChange:(index:number)=>void;fillColorForValue?:(value:number)=>vec4}[]):void {
     if(!this.badgeMaterial)return; // same guard sphereButton uses — set once in ScoutMain.start(), before any marker exists
     const material=this.badgeMaterial;
-    const dialRadius=3.2;
+    const dialRadius=5.2;
     const panelH=dialRadius*2+9;
     const labelCardHalfHeight=1.6,gap=2;
     const y=labelY+labelCardHalfHeight+gap+panelH/2;
-    const host=this.obj(root,"Asset controls",new vec3(0,y,4));
+    // Same backAxis correction as decorateMarker — see its comment.
+    const pos=backAxis===1?new vec3(-4,y,0):backAxis===2?new vec3(0,y,-4):new vec3(0,y,4);
+    const rot=backAxis===1?quat.rotationFromTo(vec3.forward(),vec3.right().uniformScale(-1))
+      :backAxis===2?quat.angleAxis(Math.PI,vec3.up())
+      :null;
+    const host=this.obj(root,"Asset controls",pos);
+    if(rot)host.getTransform().setLocalRotation(rot);
     host.createComponent("Component.Canvas");
     const back=host.createComponent(BackPlate.getTypeName()) as BackPlate;
     back.style="simple";

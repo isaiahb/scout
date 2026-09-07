@@ -45,16 +45,25 @@ export class ScoutRotaryDial {
   readonly root:SceneObject;
   constructor(parent:SceneObject,pos:vec3,private material:Material,private theme:RotaryDialTheme,private config:RotaryDialConfig){
     this.index=config.initialIndex;
-    const radius=config.radius??3.2;
-    this.ringRadius=radius*0.72;
-    this.tubeRadius=radius*0.28;
+    const radius=config.radius??5.2;
+    // Bigger hole relative to the tube (0.75/0.25 split, up from 0.72/0.28) so the centered value text
+    // has more room to sit inside the ring without crowding the metal.
+    this.ringRadius=radius*0.75;
+    this.tubeRadius=radius*0.25;
     this.root=this.obj(parent,"Dial",pos);
     const outer=this.ringRadius+this.tubeRadius;
-    this.text(this.root,config.label,new vec3(0,outer+3.4,0.2),outer*2+6,2.2,theme.textColor);
-    this.valueText=this.text(this.root,"",new vec3(0,-(outer+2.6),0.2),outer*2+6,2.2,theme.textColor);
+    this.text(this.root,config.label,new vec3(0,outer+3.4,0.2),outer*2+6,2.2,theme.textColor,46);
     this.buildTicks();
     this.buildRing();
     if(config.fillColorForValue)this.buildFill();
+    // Value sits inside the ring's hole instead of below it. Built last (and so painted last, per this
+    // engine's hierarchy-order rendering) so it lands on top of the fill instead of underneath it —
+    // built earlier, the fill fully hid it despite sitting at a nearer z. Against a bright WB/Kelvin
+    // color swatch the theme's light text would wash out, so those dials get a fixed dark value color
+    // instead — blackbody colors are never dark enough themselves to make dark text unreadable.
+    const holeDiameter=(this.ringRadius-this.tubeRadius)*2;
+    const valueColor=config.fillColorForValue?new vec4(0.08,0.08,0.09,1):theme.textColor;
+    this.valueText=this.text(this.root,"",new vec3(0,0,this.tubeRadius+0.15),holeDiameter*0.92,holeDiameter*0.6,valueColor,42);
     this.updateValueText();
     this.refreshFill();
   }
@@ -182,7 +191,12 @@ export class ScoutRotaryDial {
     this.ringVisual.mesh=b.getMesh();b.updateMesh();
   }
   private buildFill():void {
-    const host=this.obj(this.root,"Fill",new vec3(0,0,-this.tubeRadius*0.4));
+    // A small fixed forward offset, not tubeRadius-scaled: the previous -tubeRadius*0.4 (meant to sit
+    // the fill just inside the ring) put it at a bigger radius behind the panel's own opaque background
+    // plate (ControlsContent's +0.5 minus this dial's own more-negative offset nets negative overall) —
+    // invisible under real depth-tested rendering (an isolated/ortho capture doesn't show this at all).
+    // A small positive offset keeps it comfortably in front of the panel regardless of dial size.
+    const host=this.obj(this.root,"Fill",new vec3(0,0,0.1));
     this.fillVisual=host.createComponent("Component.RenderMeshVisual") as RenderMeshVisual;
     this.fillVisual.mainMaterial=this.material.clone();
   }
@@ -218,10 +232,10 @@ export class ScoutRotaryDial {
   private obj(parent:SceneObject,name:string,pos:vec3):SceneObject {
     const so=global.scene.createSceneObject(name);so.setParent(parent);so.getTransform().setLocalPosition(pos);return so;
   }
-  private text(parent:SceneObject,value:string,pos:vec3,w:number,h:number,color:vec4):Text {
+  private text(parent:SceneObject,value:string,pos:vec3,w:number,h:number,color:vec4,size:number):Text {
     const so=this.obj(parent,"Text",pos);
     const t=so.createComponent("Component.Text") as Text;
-    t.text=value;t.depthTest=true;t.font=this.theme.font;t.size=44;t.textFill.color=color;
+    t.text=value;t.depthTest=true;t.font=this.theme.font;t.size=size;t.textFill.color=color;
     t.horizontalAlignment=HorizontalAlignment.Center;t.verticalAlignment=VerticalAlignment.Center;
     t.horizontalOverflow=HorizontalOverflow.Overflow;t.verticalOverflow=VerticalOverflow.Overflow;
     t.layoutRect=Rect.create(-w/2,w/2,-h/2,h/2);
