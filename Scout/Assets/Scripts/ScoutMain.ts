@@ -1,6 +1,6 @@
 import {ScoutTransformGizmo} from "./ScoutTransformGizmo";
 import {ScoutSharedSession} from "./ScoutSharedSession";
-import {parseLayout,ScoutLayout} from "./ScoutLayout";
+import {parseLayout,ScoutLayout,MarkerRecord} from "./ScoutLayout";
 import {ScoutPaletteUI} from "./ScoutPaletteUI";
 import {buildMarkerMesh, NOTE_PIN_HEIGHT} from "./ScoutMarkerMesh";
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable";
@@ -331,12 +331,12 @@ export class ScoutMain extends BaseScriptComponent {
     bulb.getTransform().setWorldRotation(quat.lookAt(tilted.uniformScale(-1),vec3.up()));
   }
   private prefabFor(kind:number):ObjectPrefab {return [this.cameraPrefab,this.lightPrefab,null,this.standingPrefab,this.seatedPrefab][kind];}
-  private makeMarker(kind:number,label:string,groundY:number):SceneObject {
+  private makeMarker(kind:number,label:string,groundY:number,saved?:MarkerRecord):SceneObject {
     const root=global.scene.createSceneObject(label);root.setParent(this.markers);
     const prefab=this.prefabFor(kind),height=MODEL_HEIGHTS[kind];
-    const cameraState=kind===0?defaultCameraState():null;
-    const lightState=kind===1?defaultLightState():null;
-    const noteState=kind===2?defaultNoteState():null;
+    const cameraState=kind===0?{...defaultCameraState(),...saved?.cameraState}:null;
+    const lightState=kind===1?{...defaultLightState(),...saved?.lightState}:null;
+    const noteState=kind===2?{...defaultNoteState(),...saved?.noteState}:null;
     let lightRef:LightMarkerRef|null=null;
     if(prefab){
       const model=prefab.instantiate(root),t=model.getTransform();
@@ -489,7 +489,10 @@ export class ScoutMain extends BaseScriptComponent {
   private snapshot():string {
     const data:ScoutLayout={version:1,frame:'manual',markers:this.placed.map((obj,i)=>{
       const t=obj.getTransform(),p=t.getLocalPosition(),q=t.getLocalRotation();
-      return {kind:this.kinds[i],label:obj.name,position:[p.x,p.y,p.z],rotation:[q.w,q.x,q.y,q.z]};
+      return {kind:this.kinds[i],label:obj.name,position:[p.x,p.y,p.z],rotation:[q.w,q.x,q.y,q.z],
+        cameraState:this.cameraStates[i]?{...this.cameraStates[i]}:undefined,
+        lightState:this.lightStates[i]?{...this.lightStates[i]}:undefined,
+        noteState:this.noteStates[i]?{...this.noteStates[i]}:undefined};
     })};return JSON.stringify(data);
   }
   private restore(raw:string):void {
@@ -497,7 +500,7 @@ export class ScoutMain extends BaseScriptComponent {
     this.clear();
     this.markers.getTransform().setWorldPosition(this.camera.getTransform().getWorldPosition());
     this.markers.getTransform().setWorldRotation(this.camera.getTransform().getWorldRotation());
-    for(const m of data.markers){const obj=this.makeMarker(m.kind,m.label,0),t=obj.getTransform();
+    for(const m of data.markers){const obj=this.makeMarker(m.kind,m.label,0,m),t=obj.getTransform();
       t.setLocalPosition(new vec3(m.position[0],m.position[1],m.position[2]));
       t.setLocalRotation(new quat(m.rotation[0],m.rotation[1],m.rotation[2],m.rotation[3]));
       if(m.kind===1)this.tiltKeyLight(obj);

@@ -43,3 +43,33 @@ test('actor types survive shared-layout decoding',()=>{
  const raw=JSON.parse(layout); raw.markers[0].kind=5;
  expect(()=>parseLayout(JSON.stringify(raw))).toThrow();
 });
+
+
+test('shared save/recover retains distinct camera, light and note settings',()=>{
+ const marker=(kind:number,settings:object)=>({kind,label:'Marker '+kind,position:[10,0,-110],rotation:[1,0,0,0],...settings});
+ const markers=[
+  marker(0,{cameraState:{isoIndex:7,apertureIndex:9,shutterIndex:18,kelvinIndex:0}}),
+  marker(0,{cameraState:{isoIndex:0,apertureIndex:0,shutterIndex:0,kelvinIndex:11}}),
+  marker(1,{lightState:{intensityIndex:0,kelvinIndex:11}}),
+  marker(2,{noteState:{step:4,shotNumber:10,shotType:3,movementType:5}}),
+  marker(2,{noteState:{step:2,shotNumber:3,shotType:null,movementType:null}})
+ ];
+ const raw=JSON.stringify({version:1,frame:'manual',markers});
+ const db=new Map<string,string>(),a=client(db);a.c.connect();a.c.invite();a.c.save(raw);a.disconnect();
+ const b=client(db,true);b.c.connect();let recovered:any;b.c.load(value=>{recovered=parseLayout(value);});
+ expect(recovered.markers).toEqual(markers);
+ expect(parseLayout(layout).markers[0].cameraState).toBeUndefined();
+});
+test('invalid saved settings are rejected before restoring a layout',()=>{
+ for(const [kind,settings] of [
+  [0,{cameraState:{isoIndex:8,apertureIndex:0,shutterIndex:0,kelvinIndex:0}}],
+  [1,{lightState:{intensityIndex:1.5,kelvinIndex:0}}],
+  [1,{lightState:{intensityIndex:20,kelvinIndex:12}}],
+  [2,{noteState:{step:5,shotNumber:1,shotType:null,movementType:null}}],
+  [2,{noteState:{step:4,shotNumber:11,shotType:0,movementType:6}}],
+  [3,{cameraState:{isoIndex:0,apertureIndex:0,shutterIndex:0,kelvinIndex:0}}]
+ ] as [number,object][]){
+  const data=JSON.parse(layout);Object.assign(data.markers[0],{kind},settings);
+  expect(()=>parseLayout(JSON.stringify(data))).toThrow();
+ }
+});
